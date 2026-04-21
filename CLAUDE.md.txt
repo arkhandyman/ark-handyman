@@ -1,0 +1,49 @@
+# Project Overview
+This project is a website for "Ark Handyman," a handyman business serving Hamilton County, Tennessee, with a focus on Ooltewah and Collegedale. The website will showcase services like drywall repair, painting, and tiling, and will include SEO optimization to rank on Google and AI search engines.
+
+# Key Features
+- Homepage with a hero section, trust signals, and service highlights
+- Individual service pages for drywall repair, painting, tiling, and more
+- Service area pages for Ooltewah, Collegedale, and other Hamilton County locations
+- FAQ page with common questions about handyman services
+- Contact page with a form, phone number, and embedded Google Map
+- SEO optimization, including metadata, schema.org structured data, and fast load times
+
+# Design Guidelines
+- **Color Palette**:
+  - Primary Navy: #1B3A5F
+  - Warm Yellow: #F2A922
+  - White: #FFFFFF
+  - Light Gray: #F4F5F7
+  - Dark Charcoal: #2C2C2C
+- **Typography**:
+  - Headings: Inter or Poppins (bold, clean sans-serif)
+  - Body: 16px base font size, 1.6 line-height
+- **Design Style**:
+  - Professional but approachable
+  - Rounded corners on buttons and cards
+  - Subtle box shadows for depth
+
+# Folder Structure
+- `/pages`: All Next.js pages (e.g., `index.js`, `about.js`, `services/[slug].js`)
+- `/components`: Reusable components (e.g., `Header.js`, `Footer.js`, `ServiceCard.js`)
+- `/styles`: Tailwind CSS configuration and global styles
+- `/public`: Static assets like images and icons
+
+# SEO and Optimization Rules
+- Add unique metadata for every page (title, description, OpenGraph tags)
+- Use schema.org structured data for LocalBusiness, Service, and FAQ
+- Optimize images with `next/image` and lazy loading
+- Ensure fast load times with static site generation (SSG)
+- Create a sitemap.xml and robots.txt
+
+# Development Workflow
+1. Install dependencies: `npm install`
+2. Run the development server: `npm run dev`
+3. Build for production: `npm run build`
+4. Deploy to Vercel: Push to GitHub and connect the repo to Vercel
+
+# Additional Notes
+- The business is licensed and insured with 9 years of experience.
+- Focus on conversational, natural language for all content to optimize for AI search engines.
+- Use placeholder images and text where necessary; real content will be added later.
