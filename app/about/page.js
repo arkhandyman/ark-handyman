@@ -64,13 +64,13 @@ export default function AboutPage() {
                   communication from start to finish.
                 </p>
                 <p>
-                  We're locally owned and operated out of Ooltewah. When you hire Ark Handyman,
-                  you're not calling a 1-800 number or working with a franchise. You're working
+                  We&apos;re locally owned and operated out of Ooltewah. When you hire Ark Handyman,
+                  you&apos;re not calling a 1-800 number or working with a franchise. You&apos;re working
                   directly with someone who cares about this community and its homes.
                 </p>
                 <p>
                   Nine years in, the best part of this work is still the moment a homeowner sees the
-                  finished result and says, "I didn't think it could look that good." That's what we
+                  finished result and says, &ldquo;I didn&apos;t think it could look that good.&rdquo; That&apos;s what we
                   show up for.
                 </p>
               </div>
