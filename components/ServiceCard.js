@@ -41,7 +41,7 @@ const serviceIcons = {
 
 export default function ServiceCard({ service }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow flex flex-col">
+    <article className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow flex flex-col">
       <div className="text-navy mb-4">
         {serviceIcons[service.slug] || serviceIcons['general-repairs']}
       </div>
@@ -61,6 +61,6 @@ export default function ServiceCard({ service }) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </Link>
-    </div>
+    </article>
   )
 }

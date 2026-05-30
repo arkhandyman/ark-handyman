@@ -14,6 +14,9 @@ export function generateMetadata({ params }) {
   return {
     title: `Handyman Services in ${area.name}, TN | Ark Handyman`,
     description: `Ark Handyman provides professional handyman services in ${area.name}, Tennessee. Drywall repair, painting, tile, and more. Licensed & insured. Free estimates.`,
+    alternates: {
+      canonical: `/service-areas/${area.slug}`,
+    },
     openGraph: {
       title: `Handyman Services in ${area.name}, TN`,
       description: `Licensed & insured handyman services in ${area.name}, TN.`,
@@ -27,16 +30,45 @@ export default function ServiceAreaPage({ params }) {
 
   const localBusinessSchema = {
     '@context': 'https://schema.org',
-    '@type': 'LocalBusiness',
-    name: 'Ark Handyman',
-    description: `Handyman services in ${area.name}, TN`,
+    '@type': ['LocalBusiness', 'HomeAndConstructionBusiness'],
+    '@id': `${siteConfig.url}/#business`,
+    name: siteConfig.name,
+    description: `Professional handyman services in ${area.name}, TN — drywall repair, painting, tile installation, and more. Licensed & insured.`,
     url: `${siteConfig.url}/service-areas/${area.slug}`,
     telephone: siteConfig.phone,
+    email: siteConfig.email,
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Ooltewah',
+      addressRegion: 'TN',
+      addressCountry: 'US',
+    },
     areaServed: {
       '@type': 'City',
       name: area.name,
       addressRegion: 'TN',
+      addressCountry: 'US',
     },
+    priceRange: 'Starting at $150',
+  }
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: siteConfig.url },
+      { '@type': 'ListItem', position: 2, name: `Handyman in ${area.name}, TN`, item: `${siteConfig.url}/service-areas/${area.slug}` },
+    ],
+  }
+
+  const areaFaqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: area.faq.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
   }
 
   return (
@@ -44,6 +76,14 @@ export default function ServiceAreaPage({ params }) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(areaFaqSchema) }}
       />
 
       {/* Hero */}
@@ -65,7 +105,7 @@ export default function ServiceAreaPage({ params }) {
 
       {/* Description */}
       <section className="py-16 px-4 bg-white">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
+        <article className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
           <div>
             <h2 className="font-heading font-bold text-2xl text-navy mb-4">
               Serving {area.name} Homeowners
@@ -90,7 +130,7 @@ export default function ServiceAreaPage({ params }) {
               referrerPolicy="no-referrer-when-downgrade"
             />
           </div>
-        </div>
+        </article>
       </section>
 
       {/* Services list */}
@@ -99,35 +139,38 @@ export default function ServiceAreaPage({ params }) {
           <h2 className="font-heading font-bold text-2xl md:text-3xl text-navy mb-8 text-center">
             Services Available in {area.name}
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 list-none m-0 p-0">
             {services.map((s) => (
-              <Link
-                key={s.slug}
-                href={`/services/${s.slug}`}
-                className="flex items-center gap-3 bg-white rounded-xl px-5 py-4 shadow-sm border border-gray-100 hover:border-navy hover:shadow-md transition group"
-              >
-                <svg
-                  className="w-5 h-5 text-ark-yellow flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              <li key={s.slug}>
+                <Link
+                  href={`/services/${s.slug}`}
+                  className="flex items-center gap-3 bg-white rounded-xl px-5 py-4 shadow-sm border border-gray-100 hover:border-navy hover:shadow-md transition group"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                </svg>
-                <span className="font-semibold text-navy text-sm group-hover:text-ark-yellow transition-colors">
-                  {s.shortTitle}
-                </span>
-                <svg
-                  className="w-4 h-4 text-navy/30 ml-auto group-hover:translate-x-1 transition-transform"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
+                  <svg
+                    className="w-5 h-5 text-ark-yellow flex-shrink-0"
+                    aria-hidden="true"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="font-semibold text-navy text-sm group-hover:text-ark-yellow transition-colors">
+                    {s.shortTitle}
+                  </span>
+                  <svg
+                    className="w-4 h-4 text-navy/30 ml-auto group-hover:translate-x-1 transition-transform"
+                    aria-hidden="true"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 

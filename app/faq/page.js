@@ -1,16 +1,28 @@
 import FAQAccordion from '@/components/FAQAccordion'
 import CTABanner from '@/components/CTABanner'
-import { faqData } from '@/lib/data'
+import { faqData, siteConfig } from '@/lib/data'
 
 export const metadata = {
   title: 'FAQ | Ark Handyman — Hamilton County, TN',
   description:
     'Answers to common questions about Ark Handyman services, scheduling, pricing, and service areas in Hamilton County, TN.',
+  alternates: {
+    canonical: '/faq',
+  },
   openGraph: {
     title: 'Frequently Asked Questions | Ark Handyman',
     description:
       'Everything you need to know about Ark Handyman services in Hamilton County, TN.',
   },
+}
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: siteConfig.url },
+    { '@type': 'ListItem', position: 2, name: 'FAQ', item: `${siteConfig.url}/faq` },
+  ],
 }
 
 const faqSchema = {
@@ -31,6 +43,10 @@ const faqSchema = {
 export default function FAQPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}

@@ -6,10 +6,21 @@ import TestimonialCard from '@/components/TestimonialCard'
 import CTABanner from '@/components/CTABanner'
 import { services, serviceAreas, testimonials, siteConfig } from '@/lib/data'
 
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: siteConfig.url },
+  ],
+}
+
 export const metadata = {
   title: 'Ark Handyman | Honest & Reliable Handyman Services in Hamilton County, TN',
   description:
     'Ark Handyman offers professional drywall repair, painting, tiling, and general home repairs in Hamilton County, TN. Licensed, insured, and 9 years of experience.',
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
     title: 'Ark Handyman | Hamilton County, TN',
     description:
@@ -17,37 +28,12 @@ export const metadata = {
   },
 }
 
-const localBusinessSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'LocalBusiness',
-  name: 'Ark Handyman',
-  description: siteConfig.description,
-  url: siteConfig.url,
-  telephone: siteConfig.phone,
-  email: siteConfig.email,
-  address: {
-    '@type': 'PostalAddress',
-    addressLocality: 'Ooltewah',
-    addressRegion: 'TN',
-    addressCountry: 'US',
-  },
-  geo: {
-    '@type': 'GeoCoordinates',
-    latitude: 35.0762,
-    longitude: -85.0633,
-  },
-  areaServed: serviceAreas.map((a) => a.name),
-  priceRange: '$$',
-  openingHours: 'Mo-Fr 08:00-18:00',
-  hasCredential: ['Licensed', 'Insured'],
-}
-
 export default function HomePage() {
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
 
       {/* Hero */}
@@ -117,14 +103,14 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { src: '/images/tile-backsplash-portfolio.jpeg', alt: 'Tile backsplash installation by Ark Handyman in Hamilton County, TN' },
-              { src: '/images/tile-floor-portfolio.JPG', alt: 'Tile floor installation by Ark Handyman' },
-              { src: '/images/fine-woodwork-portfolio.JPG', alt: 'Fine woodwork completed by Ark Handyman in Hamilton County, TN' },
-              { src: '/images/kitchen-lighting-install-portfolio.JPG', alt: 'Kitchen lighting installation by Ark Handyman in Ooltewah, TN' },
+              { src: '/images/tile-backsplash-portfolio.webp', alt: 'Tile backsplash installation completed by Ark Handyman in Hamilton County, TN' },
+              { src: '/images/tile-floor-portfolio.webp', alt: 'Tile floor installation completed by Ark Handyman in Ooltewah, TN' },
+              { src: '/images/fine-woodwork-portfolio.webp', alt: 'Fine woodwork trim repair completed by Ark Handyman in Hamilton County, TN' },
+              { src: '/images/kitchen-lighting-install-portfolio.webp', alt: 'Kitchen lighting installation completed by Ark Handyman in Ooltewah, TN' },
             ].map(({ src, alt }) => (
-              <div
+              <figure
                 key={src}
-                className="rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group aspect-[4/3]"
+                className="rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group aspect-[4/3] m-0"
               >
                 <div className="relative w-full h-full">
                   <Image
@@ -135,7 +121,7 @@ export default function HomePage() {
                     sizes="(max-width: 768px) 50vw, 25vw"
                   />
                 </div>
-              </div>
+              </figure>
             ))}
           </div>
         </div>

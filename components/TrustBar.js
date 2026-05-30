@@ -55,16 +55,16 @@ const trustItems = [
 
 export default function TrustBar() {
   return (
-    <section className="bg-light-gray border-y border-gray-200 py-8">
+    <section aria-label="Why choose Ark Handyman" className="bg-light-gray border-y border-gray-200 py-8">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <ul className="grid grid-cols-2 md:grid-cols-4 gap-6 list-none m-0 p-0">
           {trustItems.map(({ icon, label }) => (
-            <div key={label} className="flex flex-col items-center gap-2 text-center">
-              <div className="text-navy">{icon}</div>
+            <li key={label} className="flex flex-col items-center gap-2 text-center">
+              <div className="text-navy" aria-hidden="true">{icon}</div>
               <span className="font-heading font-semibold text-navy text-sm">{label}</span>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   )

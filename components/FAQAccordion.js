@@ -27,8 +27,8 @@ function FAQItem({ question, answer }) {
         </svg>
       </button>
       {open && (
-        <div className="pb-4 text-charcoal/70 text-sm leading-relaxed">
-          {answer}
+        <div className="pb-4">
+          <p className="text-charcoal/70 text-sm leading-relaxed">{answer}</p>
         </div>
       )}
     </div>

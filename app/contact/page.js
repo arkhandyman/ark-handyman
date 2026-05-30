@@ -1,10 +1,22 @@
 import ContactForm from '@/components/ContactForm'
 import { siteConfig } from '@/lib/data'
 
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: siteConfig.url },
+    { '@type': 'ListItem', position: 2, name: 'Contact', item: `${siteConfig.url}/contact` },
+  ],
+}
+
 export const metadata = {
   title: 'Contact Ark Handyman | Phone Estimates in Hamilton County, TN',
   description:
     'Get in touch with Ark Handyman for a free phone estimate on your next home repair project. Serving Ooltewah, Collegedale, Chattanooga, and all of Hamilton County, TN.',
+  alternates: {
+    canonical: '/contact',
+  },
   openGraph: {
     title: 'Contact Ark Handyman',
     description:
@@ -15,6 +27,10 @@ export const metadata = {
 export default function ContactPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       {/* Hero */}
       <section className="bg-navy text-white py-20 px-4">
         <div className="max-w-6xl mx-auto text-center">
@@ -45,7 +61,7 @@ export default function ContactPage() {
               <h2 className="font-heading font-bold text-2xl text-navy mb-6">
                 Contact Information
               </h2>
-              <div className="flex flex-col gap-4">
+              <address className="not-italic flex flex-col gap-4">
                 {[
                   {
                     label: 'Phone',
@@ -92,7 +108,7 @@ export default function ContactPage() {
                     </div>
                   </div>
                 ))}
-              </div>
+              </address>
             </div>
 
             {/* Hours */}

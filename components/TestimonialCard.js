@@ -17,15 +17,18 @@ function StarRating({ rating }) {
 
 export default function TestimonialCard({ testimonial }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col gap-4">
+    <article
+      aria-label={`Review by ${testimonial.name}`}
+      className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col gap-4"
+    >
       <StarRating rating={testimonial.rating} />
       <blockquote className="text-charcoal/80 text-sm leading-relaxed italic">
         &ldquo;{testimonial.text}&rdquo;
       </blockquote>
-      <div className="mt-auto">
+      <footer className="mt-auto">
         <p className="font-heading font-bold text-navy text-sm">{testimonial.name}</p>
         <p className="text-charcoal/50 text-xs">{testimonial.location}</p>
-      </div>
-    </div>
+      </footer>
+    </article>
   )
 }

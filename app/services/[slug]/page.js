@@ -14,6 +14,9 @@ export function generateMetadata({ params }) {
   return {
     title: `${service.title} in Hamilton County, TN`,
     description: `Ark Handyman provides professional ${service.shortTitle.toLowerCase()} in Hamilton County, TN. Licensed & insured. Free estimates. Serving Ooltewah, Collegedale, and surrounding areas.`,
+    alternates: {
+      canonical: `/services/${service.slug}`,
+    },
     openGraph: {
       title: `${service.title} | Ark Handyman`,
       description: `Professional ${service.shortTitle.toLowerCase()} in Hamilton County, TN.`,
@@ -28,16 +31,38 @@ export default function ServicePage({ params }) {
   const serviceSchema = {
     '@context': 'https://schema.org',
     '@type': 'Service',
+    '@id': `${siteConfig.url}/services/${service.slug}#service`,
     name: service.title,
     description: service.description,
+    url: `${siteConfig.url}/services/${service.slug}`,
     provider: {
       '@type': 'LocalBusiness',
+      '@id': `${siteConfig.url}/#business`,
       name: 'Ark Handyman',
       url: siteConfig.url,
       telephone: siteConfig.phone,
-      areaServed: 'Hamilton County, TN',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: 'Ooltewah',
+        addressRegion: 'TN',
+        addressCountry: 'US',
+      },
     },
-    areaServed: 'Hamilton County, TN',
+    areaServed: {
+      '@type': 'AdministrativeArea',
+      name: 'Hamilton County',
+      addressRegion: 'TN',
+      addressCountry: 'US',
+    },
+    offers: {
+      '@type': 'Offer',
+      priceSpecification: {
+        '@type': 'UnitPriceSpecification',
+        price: '150',
+        priceCurrency: 'USD',
+        description: 'Starting at $150',
+      },
+    },
   }
 
   const faqSchema = {
@@ -50,6 +75,15 @@ export default function ServicePage({ params }) {
     })),
   }
 
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: siteConfig.url },
+      { '@type': 'ListItem', position: 2, name: service.shortTitle, item: `${siteConfig.url}/services/${service.slug}` },
+    ],
+  }
+
   return (
     <>
       <script
@@ -59,6 +93,10 @@ export default function ServicePage({ params }) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
 
       {/* Hero */}
@@ -78,14 +116,14 @@ export default function ServicePage({ params }) {
 
       {/* Description + portfolio image */}
       <section className="py-16 px-4 bg-white">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <article className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <div>
             <h2 className="font-heading font-bold text-2xl text-navy mb-4">
               About This Service
             </h2>
             <p className="text-charcoal/80 leading-relaxed text-lg">{service.description}</p>
           </div>
-          <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-light-gray">
+          <figure className="m-0 relative aspect-[4/3] rounded-2xl overflow-hidden bg-light-gray">
             {service.image ? (
               <Image
                 src={service.image}
@@ -93,15 +131,15 @@ export default function ServicePage({ params }) {
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 50vw"
-                priority
+                loading="lazy"
               />
             ) : (
               <div className="absolute inset-0 bg-gradient-to-br from-navy/10 to-navy/5 flex items-center justify-center">
                 <span className="text-navy/40 text-sm font-medium">{service.shortTitle}</span>
               </div>
             )}
-          </div>
-        </div>
+          </figure>
+        </article>
       </section>
 
       {/* What's Included */}
@@ -110,11 +148,12 @@ export default function ServicePage({ params }) {
           <h2 className="font-heading font-bold text-2xl md:text-3xl text-navy mb-8 text-center">
             What&apos;s Included
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 list-none m-0 p-0">
             {service.included.map((item) => (
-              <div key={item} className="flex items-start gap-3 bg-white rounded-xl px-5 py-4 shadow-sm border border-gray-100">
+              <li key={item} className="flex items-start gap-3 bg-white rounded-xl px-5 py-4 shadow-sm border border-gray-100">
                 <svg
                   className="w-5 h-5 text-ark-yellow flex-shrink-0 mt-0.5"
+                  aria-hidden="true"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -122,9 +161,9 @@ export default function ServicePage({ params }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                 </svg>
                 <span className="text-charcoal/80 text-sm">{item}</span>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 

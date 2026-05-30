@@ -78,6 +78,7 @@ export default function Footer() {
               {[
                 { href: '/', label: 'Home' },
                 { href: '/about', label: 'About Us' },
+                { href: '/blog', label: 'Blog' },
                 { href: '/faq', label: 'FAQ' },
                 { href: '/contact', label: 'Contact' },
                 { href: '/contact', label: 'Get a Phone Estimate' },

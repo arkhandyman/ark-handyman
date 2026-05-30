@@ -1,11 +1,24 @@
 import Image from 'next/image'
 import CTABanner from '@/components/CTABanner'
 import TrustBar from '@/components/TrustBar'
+import { siteConfig } from '@/lib/data'
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: siteConfig.url },
+    { '@type': 'ListItem', position: 2, name: 'About', item: `${siteConfig.url}/about` },
+  ],
+}
 
 export const metadata = {
   title: "About Ark Handyman | Hamilton County's Trusted Handyman",
   description:
     "Meet Ark Handyman — a licensed and insured handyman serving Hamilton County, TN for 9 years. Honest pricing, quality work, and genuine care for your home.",
+  alternates: {
+    canonical: '/about',
+  },
   openGraph: {
     title: "About Ark Handyman | Hamilton County, TN",
     description:
@@ -16,6 +29,10 @@ export const metadata = {
 export default function AboutPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       {/* Hero */}
       <section className="bg-navy text-white py-20 px-4">
         <div className="max-w-6xl mx-auto text-center">
@@ -33,18 +50,21 @@ export default function AboutPage() {
       {/* Story */}
       <section className="py-16 px-4 bg-white">
         <div className="max-w-5xl mx-auto">
+          <article>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-12">
             {/* Photo */}
-            <div className="relative rounded-2xl overflow-hidden shadow-md aspect-[3/4] w-full max-w-sm mx-auto md:mx-0">
-              <Image
-                src="/images/Chad-arkhandyman-about.jpg"
-                alt="Owner of Ark Handyman smiling in a navy blue hoodie."
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 400px"
-                priority
-              />
-            </div>
+            <figure className="m-0">
+              <div className="relative rounded-2xl overflow-hidden shadow-md aspect-[3/4] w-full max-w-sm mx-auto md:mx-0">
+                <Image
+                  src="/images/Chad-arkhandyman-about.webp"
+                  alt="Owner of Ark Handyman standing in Ooltewah, TN, ready for a home repair job."
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 400px"
+                  loading="lazy"
+                />
+              </div>
+            </figure>
 
             {/* Story text */}
             <div>
@@ -120,6 +140,7 @@ export default function AboutPage() {
                 </div>
               ))}
           </div>
+          </article>
         </div>
       </section>
 

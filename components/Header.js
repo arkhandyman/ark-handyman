@@ -60,6 +60,9 @@ export default function Header() {
           <Link href="/faq" className="hover:text-ark-yellow transition-colors">
             FAQ
           </Link>
+          <Link href="/blog" className="hover:text-ark-yellow transition-colors">
+            Blog
+          </Link>
           <Link href="/contact" className="hover:text-ark-yellow transition-colors">
             Contact
           </Link>
@@ -154,6 +157,13 @@ export default function Header() {
               className="py-2 px-3 rounded-lg hover:bg-white/10 transition-colors"
             >
               FAQ
+            </Link>
+            <Link
+              href="/blog"
+              onClick={() => setMobileOpen(false)}
+              className="py-2 px-3 rounded-lg hover:bg-white/10 transition-colors"
+            >
+              Blog
             </Link>
             <Link
               href="/contact"
