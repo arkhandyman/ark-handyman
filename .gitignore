@@ -3,6 +3,5 @@ node_modules/
 .env*
 *.local
 
-# Tina CMS — generated at build time, do not commit
+# Tina CMS generated files
 tina/__generated__/
-public/admin/
