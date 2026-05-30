@@ -47,22 +47,17 @@ function htmlResponse(status, content) {
 <script>
   (function () {
     var msg = ${JSON.stringify(message)};
-    // Send directly to opener (works for same-origin and cross-origin)
-    if (window.opener) {
-      window.opener.postMessage(msg, '*');
-    }
-    // Also support the handshake flow some versions expect
     function receiveMessage(e) {
       if (window.opener) {
-        window.opener.postMessage(msg, e.origin);
+        window.opener.postMessage(msg, '*');
       }
       window.removeEventListener('message', receiveMessage);
+      setTimeout(function () { window.close(); }, 500);
     }
     window.addEventListener('message', receiveMessage, false);
     if (window.opener) {
       window.opener.postMessage('authorizing:github', '*');
     }
-    setTimeout(function () { window.close(); }, 2000);
   })();
 </script>
 <p>Completing login… you can close this window.</p>
