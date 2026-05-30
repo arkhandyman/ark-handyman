@@ -28,38 +28,27 @@ export async function GET(request) {
       return htmlResponse('error', data.error_description ?? 'Failed to get access token')
     }
 
-    return htmlResponse('success', JSON.stringify({ token: data.access_token, provider: 'github' }))
+    return htmlResponse('success', data.access_token)
   } catch (err) {
     return htmlResponse('error', 'OAuth exchange failed')
   }
 }
 
-function htmlResponse(status, content) {
-  const message =
+function htmlResponse(status, token) {
+  const msg =
     status === 'success'
-      ? `authorization:github:success:${content}`
-      : `authorization:github:error:${content}`
+      ? `authorization:github:success:{"token":"${token}","provider":"github"}`
+      : `authorization:github:error:${token}`
 
-  const html = `<!doctype html>
-<html>
-<head><title>Authenticating…</title></head>
-<body>
-<p id="status">${status === 'success' ? '✅ Login successful — closing…' : '❌ Login failed: ${content}'}</p>
-<script>
-  (function () {
-    var msg = ${JSON.stringify(message)};
-    if (window.opener) {
-      window.opener.postMessage(msg, '*');
-      setTimeout(function () { window.close(); }, 1000);
-    } else {
-      document.getElementById('status').textContent = 'Error: popup lost its connection to the admin window. Close this and try again.';
+  const html = `<!doctype html><html><body><script>
+  (function() {
+    function receiveMessage(e) {
+      window.opener.postMessage('${msg}', e.origin);
     }
+    window.addEventListener('message', receiveMessage, false);
+    window.opener.postMessage('authorizing:github', '*');
   })();
-</script>
-</body>
-</html>`
+</scr` + `ipt></body></html>`
 
-  return new Response(html, {
-    headers: { 'Content-Type': 'text/html' },
-  })
+  return new Response(html, { headers: { 'Content-Type': 'text/html' } })
 }
