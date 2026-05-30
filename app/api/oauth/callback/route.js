@@ -44,23 +44,18 @@ function htmlResponse(status, content) {
 <html>
 <head><title>Authenticating…</title></head>
 <body>
+<p id="status">${status === 'success' ? '✅ Login successful — closing…' : '❌ Login failed: ${content}'}</p>
 <script>
   (function () {
     var msg = ${JSON.stringify(message)};
-    function receiveMessage(e) {
-      if (window.opener) {
-        window.opener.postMessage(msg, '*');
-      }
-      window.removeEventListener('message', receiveMessage);
-      setTimeout(function () { window.close(); }, 500);
-    }
-    window.addEventListener('message', receiveMessage, false);
     if (window.opener) {
-      window.opener.postMessage('authorizing:github', '*');
+      window.opener.postMessage(msg, '*');
+      setTimeout(function () { window.close(); }, 1000);
+    } else {
+      document.getElementById('status').textContent = 'Error: popup lost its connection to the admin window. Close this and try again.';
     }
   })();
 </script>
-<p>Completing login… you can close this window.</p>
 </body>
 </html>`
 
