@@ -14,6 +14,16 @@ const nextConfig = {
   // Gzip/Brotli compression for all responses
   compress: true,
 
+  async redirects() {
+    return [
+      {
+        source: '/admin',
+        destination: '/admin/index.html',
+        permanent: false,
+      },
+    ]
+  },
+
   async headers() {
     return [
       {
