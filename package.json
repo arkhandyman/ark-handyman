@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "tinacms dev -c \"next dev\"",
-    "build": "tinacms build && next build",
+    "build": "node scripts/build.mjs",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
+    "@tinacms/cli": "^2.4.1",
     "gray-matter": "^4.0.3",
     "marked": "^18.0.2",
     "next": "14.2.5",
