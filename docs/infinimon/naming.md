@@ -20,7 +20,7 @@ The **Convention** column explains the rule each name was built on. That rule ma
 
 ### ⚠️ On the title
 
-The `-mon` suffix sits in exactly the space where Nintendo pays attention. This isn't a reason to abandon it, but before any money, art budget, or store listing attaches to the name:
+**Researched — see [`trademark-and-risk.md`](./trademark-and-risk.md) for the full findings.** Short version: no exact USPTO match for "Infinimon", and the bare `-mon` suffix looks far safer than feared (Digimon has coexisted with Pokémon since 1997). Nintendo enforces the **"Poké" prefix**, not `-mon`. Still do the following before any money, art budget, or store listing attaches to the name:
 
 1. Run a **USPTO trademark search** (free, at tmsearch.uspto.gov) for the exact mark and near-misses
 2. Check domain and app-store availability at the same time
