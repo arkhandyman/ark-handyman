@@ -1,6 +1,6 @@
 # Infinimon — Design Document v1
 
-**Status:** Sections 1–10 complete. Battle, taming, and breeding are implemented and simulation-validated in [`prototype/`](./prototype/) — several numbers in §3, §5, and §7 were corrected by what the simulation found.
+**Status:** Sections 1–11 complete. Battle, taming, and breeding are implemented and simulation-validated in [`prototype/`](./prototype/) — several numbers in §3, §5, and §7 were corrected by what the simulation found.
 
 **Scope target for v1:** 6 elements · 18 tameable base creatures · 18 same-element blends · 15 rare cross-element hybrids · **51 total dex** · US regions · single-player · local save · no backend.
 
@@ -22,6 +22,7 @@
 | 8 | [Story Spine](#8-story-spine) | Four characters, three acts, six beats |
 | 9 | [Art Specification](#9-art-specification) | Sketch → AI refinement pipeline, sprite specs |
 | 10 | [Not in v1](#10-explicitly-not-in-v1) | The cut list |
+| 11 | [Regions](#11-regions) | Five US regions, gating, spawn tables |
 
 ---
 
@@ -704,6 +705,52 @@ The purpose of this list is to make scope creep argue its way in. Everything bel
 If something on this list gets promoted into v1, something else has to come off. The list is a budget, not a wishlist.
 
 ---
+
+---
+
+## 11. Regions
+
+The game is set in the United States and played by travelling between regions, each a lightly fictionalised American biome. Names are placeholders — see [`naming.md`](./naming.md).
+
+Regions do three jobs at once: they stage the roster so you meet creatures gradually rather than all 18 at once, they carry the difficulty curve, and they pace the story (§8). One story beat lands on first arrival in each.
+
+| # | Region | Inspiration | Levels | Unlocks at | Elements | Creatures |
+|---|---|---|---|---|---|---|
+| 1 | **Hollow Ridge** | Appalachia — the Smokies | 3–8 | Lv 1 | Verdant, Terra, Tide | Sproutle, Thornip, Puddlup, Pebbet, Burrowl, Wickle |
+| 2 | **Bayou Verge** | Gulf Coast — Louisiana wetlands | 7–12 | Lv 7 | Tide, Verdant | Finwhisk, Brineclaw, Puddlup, Sproutle, Fernfawn, Shalebug |
+| 3 | **Sunstone Basin** | Desert Southwest — Sonoran canyons | 11–16 | Lv 11 | Ember, Terra | Scorchtail, Wickle, Coalpaw, Shalebug, Pebbet, Snapcoil |
+| 4 | **Thunder Flats** | Great Plains — tornado alley | 15–20 | Lv 15 | Gale, Spark | Ruffle, Breezel, Kitewing, Voltmoth, Bolthorn, Snapcoil |
+| 5 | **Evergreen Reach** | Pacific Northwest — Cascades old growth | 19–25 | Lv 19 | Spark, Tide, Ember, Verdant, Terra, Gale | all 18 |
+
+### How regions gate
+
+A region unlocks when your **strongest creature** reaches its unlock level. No keys, no gyms, no explicit gates — you simply grow into the next place. This keeps a young player moving forward without a checklist to understand.
+
+**Wild levels are capped just above your best creature.** The region sets the band, but a player who travels somewhere ambitious is never thrown at something unmanageable. This preserves the difficulty fix `playtest.js` established: the region drives progression, the cap protects the experience.
+
+### Overlap is deliberate
+
+Neighbouring regions share creatures. Puddlup appears in Hollow Ridge and Bayou Verge; Shalebug in Bayou Verge and Sunstone Basin. Nothing you tame early becomes instantly worthless, and the same creature caught later arrives at a higher level.
+
+**Evergreen Reach spawns all 18** — it is the endgame region, where anything you missed can still be found.
+
+### Story beats by region
+
+These map onto the three acts in §8. The opening beat is the starter selection itself, so it fires at the beginning rather than on arrival.
+
+| # | Region | Beat |
+|---|---|---|
+| 1 | **Hollow Ridge** | A micro-rift opens behind the family lab. Something frightened comes through. |
+| 2 | **Bayou Verge** | You witness a Meridian crew lattice an entire wild herd, and recover a dropped Catalyst. |
+| 3 | **Sunstone Basin** | A Meridian researcher defects, trading the facility's location for protection. |
+| 4 | **Thunder Flats** | The extraction is destabilising the rift. The other world is collapsing because of the harvest. |
+| 5 | **Evergreen Reach** | Confronting Reeve. Closing the rift would strand everything on the wrong side of it. |
+
+### Still open
+
+- **Travel should probably cost something** — right now it is free and instant in either direction. A small cost, or a one-way story gate, would make choosing a region feel like a decision.
+- **No towns, NPCs, or shops.** Regions are currently just spawn tables with a mood. That is enough to test progression; it is not enough to ship.
+- **Region-specific rares.** Nothing is exclusive to a single region yet, so there is no reason to return to one for a specific creature.
 
 ## Open questions for the next pass
 

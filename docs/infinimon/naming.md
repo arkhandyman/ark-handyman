@@ -146,6 +146,24 @@ three times as long to hatch — so these are a genuine discovery.
 
 ---
 
+## 3d. Regions (5)
+
+**Convention:** two words, evocative and grounded — a landform or feature plus a qualifier. Lightly fictionalised rather than real place names, the way Pokémon regions map onto real geography without borrowing the name.
+
+| Placeholder | Inspiration | Final |
+|---|---|---|
+| **Hollow Ridge** | Appalachia — the Smokies | |
+| **Bayou Verge** | Gulf Coast — Louisiana wetlands | |
+| **Sunstone Basin** | Desert Southwest — Sonoran canyons | |
+| **Thunder Flats** | Great Plains — tornado alley | |
+| **Evergreen Reach** | Pacific Northwest — Cascades old growth | |
+
+**Notes:**
+- `Hollow Ridge` is the starting region and the one closest to home for you — worth getting right first.
+- `Thunder Flats` is the most on-the-nose. `Evergreen Reach` is the most generic.
+- The native world on the other side of the rift **still has no name at all**.
+---
+
 ## 4. Base creatures (18)
 
 **Convention:** a portmanteau or compound of a trait and an animal, kept pronounceable by a young child, two syllables where possible. Deliberately avoiding the `-mon` / `-chu` / `-saur` endings that read as derivative.
@@ -218,7 +236,7 @@ three times as long to hatch — so these are a genuine discovery.
 
 These don't exist yet and will need names when their sections get written:
 
-- **The six zones** — and the native world itself, which has no name at all yet
+- The **native world** on the other side of the rift, which has no name at all yet
 - **~108 moves** (27 species × 4) — the largest naming job in the project by far, and worth setting a convention for *before* starting rather than during
 - **The family surname**
 - **The starter trio's in-fiction framing** — how the game presents the Wickle / Puddlup / Sproutle choice

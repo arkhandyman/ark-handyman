@@ -129,7 +129,8 @@ const S = {
   banked: {},
   battle: null,
   eggs: [],
-  wildLevel: 5,
+  region: 'hollow_ridge',
+  seenBeats: [],
   breedPick: [],
   lastResult: null,
   attune: null,
@@ -178,6 +179,8 @@ function saveGame() {
       charge: S.charge,
       dex: [...S.dex],
       banked: S.banked,
+      region: S.region,
+      seenBeats: S.seenBeats,
       eggs: S.eggs.map((e) => ({
         k: e.kind, c: e.charge, cn: e.chargeNeeded, el: e.element,
         rb: !!e.rareBloom, he: e.hybridElement, p: e.parents,
@@ -199,6 +202,8 @@ function loadGame() {
     S.charge = d.charge ?? 0;
     S.dex = new Set(d.dex || []);
     S.banked = d.banked || {};
+    S.region = d.region && G.regionById(d.region) ? d.region : 'hollow_ridge';
+    S.seenBeats = d.seenBeats || [];
     S.eggs = (d.eggs || []).map((e) => ({
       kind: e.k, charge: e.c, chargeNeeded: e.cn, element: e.el,
       rareBloom: e.rb, hybridElement: e.he, parents: e.p,
@@ -213,6 +218,7 @@ function clearSave() {
 }
 
 const el = (e) => G.ELEMENTS[e];
+const bestLevel = () => (S.team.length ? Math.max(...S.team.map((m) => m.level)) : 1);
 const initial = (m) => m.name[0].toUpperCase();
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -307,14 +313,17 @@ VIEWS.start = () => {
 
 VIEWS.home = () => {
   const alive = S.team.filter((m) => m.hp > 0).length;
-  return `<h1>The Lab</h1>
-  <div class="sub">${S.team.length} Infinimon &middot; ${alive} ready</div>
+  const region = G.regionById(S.region);
+  return `<h1>${esc(region.name)}</h1>
+  <div class="sub">${S.team.length} Infinimon &middot; ${alive} ready &middot;
+    wild Lv ${region.minLevel}&ndash;${region.maxLevel}</div>
   <div class="card">${resourceBar()}</div>
   ${eggCard()}
   <div class="card">
     <button class="primary" data-act="explore" ${alive ? '' : 'disabled'}>Explore</button>
     <div class="row" style="margin-top:8px">
-      <button data-act="view" data-v="lab">Resonance Chamber</button>
+      <button data-act="view" data-v="regions">Travel</button>
+      <button data-act="view" data-v="lab">Chamber</button>
       <button data-act="view" data-v="team">Team</button>
     </div>
     ${alive ? '' : `<button style="margin-top:8px" data-act="rest">Rest &amp; heal (all)</button>`}
@@ -493,6 +502,30 @@ VIEWS.lab = () => {
   <button data-act="view" data-v="home">Back</button>`;
 };
 
+VIEWS.regions = () => {
+  const best = bestLevel();
+  return `<h1>Travel</h1>
+  <div class="sub">Regions open up as your strongest Infinimon grows</div>
+  ${G.REGIONS.map((r) => {
+    const open = G.regionUnlocked(r, best);
+    const here = S.region === r.id;
+    const dots = r.elements.map((e) =>
+      `<span style="color:${el(e).color}">&#9670;</span>`).join('');
+    return `<div class="card" style="${here ? 'border-color:var(--accent)' : ''}">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+        <div class="nm">${esc(r.name)} ${here ? '<span style="color:var(--accent);font-size:11px">&mdash; here</span>' : ''}</div>
+        <div class="meta">Lv ${r.minLevel}&ndash;${r.maxLevel}</div>
+      </div>
+      <div class="meta" style="margin-top:2px">${dots} &middot; ${esc(r.inspiration)}</div>
+      <div class="note" style="margin-top:8px">${esc(r.blurb)}</div>
+      ${open ? (here ? '' : `<button style="margin-top:10px" data-act="travel" data-r="${r.id}">Travel here</button>`)
+        : `<div class="meta" style="margin-top:10px;color:var(--bad)">
+             Locked &mdash; needs a Lv ${r.unlockAt} Infinimon (yours is Lv ${best})</div>`}
+    </div>`;
+  }).join('')}
+  <button data-act="view" data-v="home">Back</button>`;
+};
+
 VIEWS.team = () => `<h1>Team</h1>
   <div class="sub">First three are your active party</div>
   ${S.team.map((m, i) => `<div class="card">
@@ -544,6 +577,7 @@ app.addEventListener('click', (ev) => {
     S.crystals = { spark: 2, tide: 2, ember: 2, verdant: 2, terra: 2, gale: 2 };
     S.catalysts = 3; S.charge = 0;
     S.dex = new Set(); S.banked = {}; S.battle = null; S.breedPick = []; S.eggs = [];
+    S.region = 'hollow_ridge'; S.seenBeats = [];
     S.view = 'start';
     render();
     return;
@@ -551,6 +585,9 @@ app.addEventListener('click', (ev) => {
 
   if (act === 'pick') {
     addMonster(G.createMonster({ speciesId: btn.dataset.id, level: 5, bond: 40 }));
+    // Choosing a starter IS the opening beat, so mark it seen rather than
+    // firing it later when the player happens to travel back here.
+    S.seenBeats = ['hollow_ridge'];
     S.view = 'home';
   }
 
@@ -565,8 +602,7 @@ app.addEventListener('click', (ev) => {
     const party = S.team.filter((m) => m.hp > 0).slice(0, 3);
     // Wild levels track your strongest monster and never outrun it. Previously
     // they rolled 5-7 against a starter permanently stuck at 5.
-    const best = Math.max(...party.map((m) => m.level));
-    const wild = G.randomWild(rng, Math.max(3, best - 1 + Math.floor(rng() * 2)));
+    const wild = G.randomWild(rng, Math.max(...party.map((m) => m.level)), S.region);
     S.battle = G.createBattle(party, wild, rng);
     S.battle.log.push(`A wild ${wild.name} appears!`);
     S.view = 'battle';
@@ -598,6 +634,20 @@ app.addEventListener('click', (ev) => {
     const i = S.breedPick.indexOf(uid);
     if (i >= 0) S.breedPick.splice(i, 1);
     else { S.breedPick.push(uid); if (S.breedPick.length > 2) S.breedPick.shift(); }
+  }
+
+  else if (act === 'travel') {
+    const r = G.regionById(btn.dataset.r);
+    if (r && G.regionUnlocked(r, bestLevel())) {
+      S.region = r.id;
+      if (!S.seenBeats.includes(r.id)) {
+        S.seenBeats.push(r.id);
+        show(r.name, r.beat, null, true);
+        render();
+        return;
+      }
+      S.view = 'home';
+    }
   }
 
   else if (act === 'breed') doBreed();

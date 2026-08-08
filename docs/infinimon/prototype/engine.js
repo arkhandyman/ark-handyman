@@ -984,13 +984,106 @@
   // Encounters
   // ---------------------------------------------------------------------------
 
-  function randomWild(rng, level) {
+  /*
+   * Regions (§11) — lightly fictionalised US biomes, travelled in order.
+   *
+   * Each region stages a slice of the roster, so you meet creatures gradually
+   * rather than all 18 in the first field. Overlap between neighbouring regions
+   * keeps early creatures relevant instead of instantly obsolete.
+   *
+   * Names are placeholders. See naming.md.
+   */
+  const REGIONS = [
+    {
+      id: 'hollow_ridge',
+      name: 'Hollow Ridge',
+      inspiration: 'Appalachia — the Smokies',
+      blurb: 'Layered blue ridges, morning fog that never quite burns off, ' +
+             'and creek beds under old hardwood.',
+      elements: ['verdant', 'terra', 'tide'],
+      minLevel: 3, maxLevel: 8, unlockAt: 1,
+      spawns: ['sproutle', 'thornip', 'puddlup', 'pebbet', 'burrowl', 'wickle'],
+      beat: 'A micro-rift opens behind the family lab. Something frightened comes through.',
+    },
+    {
+      id: 'bayou_verge',
+      name: 'Bayou Verge',
+      inspiration: 'Gulf Coast — Louisiana wetlands',
+      blurb: 'Black water under cypress knees, air thick enough to lean on, ' +
+             'and something moving just under the surface.',
+      elements: ['tide', 'verdant'],
+      minLevel: 7, maxLevel: 12, unlockAt: 7,
+      spawns: ['finwhisk', 'brineclaw', 'puddlup', 'sproutle', 'fernfawn', 'shalebug'],
+      beat: 'You witness a Meridian crew lattice an entire wild herd, and recover a dropped Catalyst.',
+    },
+    {
+      id: 'sunstone_basin',
+      name: 'Sunstone Basin',
+      inspiration: 'Desert Southwest — Sonoran canyons',
+      blurb: 'Red rock stacked in shelves, heat coming up off the stone, ' +
+             'and shade worth fighting over.',
+      elements: ['ember', 'terra'],
+      minLevel: 11, maxLevel: 16, unlockAt: 11,
+      spawns: ['scorchtail', 'wickle', 'coalpaw', 'shalebug', 'pebbet', 'snapcoil'],
+      beat: 'A Meridian researcher defects, trading the facility\'s location for protection.',
+    },
+    {
+      id: 'thunder_flats',
+      name: 'Thunder Flats',
+      inspiration: 'Great Plains — tornado alley',
+      blurb: 'Grass to the horizon and a sky doing all the work. ' +
+             'You see the weather coming an hour before it arrives.',
+      elements: ['gale', 'spark'],
+      minLevel: 15, maxLevel: 20, unlockAt: 15,
+      spawns: ['ruffle', 'breezel', 'kitewing', 'voltmoth', 'bolthorn', 'snapcoil'],
+      beat: 'The extraction is destabilising the rift. The other world is collapsing because of the harvest.',
+    },
+    {
+      id: 'evergreen_reach',
+      name: 'Evergreen Reach',
+      inspiration: 'Pacific Northwest — Cascades old growth',
+      blurb: 'Old growth, standing water, moss over everything. ' +
+             'The rift is thinnest here, and everything knows it.',
+      elements: ['spark', 'tide', 'ember', 'verdant', 'terra', 'gale'],
+      minLevel: 19, maxLevel: 25, unlockAt: 19,
+      spawns: SPECIES.map((s) => s.id),
+      beat: 'Confronting Reeve. Closing the rift would strand everything on the wrong side of it.',
+    },
+  ];
+
+  const regionById = (id) => REGIONS.find((r) => r.id === id);
+
+  /** Regions unlock on your strongest creature's level. */
+  const regionUnlocked = (region, bestLevel) => bestLevel >= region.unlockAt;
+
+  /**
+   * Roll a wild encounter for a region.
+   *
+   * The level comes from the region's band but is capped just above the
+   * player's best creature. Region drives progression; the cap preserves the
+   * difficulty fix from playtest.js — an under-levelled player is never thrown
+   * at something they cannot handle.
+   */
+  function randomWild(rng, bestLevel, regionId) {
+    const region = regionId ? regionById(regionId) : REGIONS[0];
+    const ids = region ? region.spawns : SPECIES.map((s) => s.id);
+
     const pool = [];
-    for (const s of SPECIES) {
+    for (const id of ids) {
+      const s = speciesById(id);
+      if (!s) continue;
       const w = SPAWN_WEIGHT[s.rarity];
       for (let i = 0; i < w; i++) pool.push(s);
     }
     const sp = pick(rng, pool);
+
+    const span = region.maxLevel - region.minLevel;
+    let level = region.minLevel + Math.floor(rng() * (span + 1));
+    if (typeof bestLevel === 'number') {
+      level = Math.min(level, bestLevel + 1);
+    }
+    level = Math.max(3, Math.min(MAX_LEVEL, level));
+
     return createMonster({ speciesId: sp.id, level, bond: 0 });
   }
 
@@ -1003,6 +1096,7 @@
     // data
     ELEMENT_CYCLE, ELEMENTS, SPECIES, HYBRID_NAMES, HYBRID_PROFILES,
     BLENDS, blendKey, blendFor, HATCH_CHARGE, HYBRID_SUCCESS_CHANCE,
+    REGIONS, regionById, regionUnlocked,
     // helpers
     makeRng, speciesById, typeMultiplier, defenseMultiplier, oppositeElement,
     hybridName, hybridKey, orderElements, statAt, movesFor, powerOf, fitToPower,
