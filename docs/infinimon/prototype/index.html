@@ -5,7 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Infinimon — Playable Prototype</title>
 <style>
+  /*
+   * Deliberately single-theme: this is a game screen, not a document, and the
+   * element palette only reads correctly against a dark ground. Every color is
+   * declared on bare :root so the page holds on any host background.
+   */
   :root {
+    color-scheme: dark;
     --bg: #10141c; --panel: #1a2030; --panel2: #232b3d; --line: #2f3950;
     --ink: #e8edf7; --dim: #8f9ab4; --accent: #7fd4ff; --good: #6fcf7f;
     --bad: #f2704a; --gold: #f5d547;
@@ -15,6 +21,13 @@
     margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 ui-sans-serif,
     system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     display: flex; justify-content: center; padding: 12px;
+    min-height: 100vh;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+  button:focus-visible, [data-act]:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
   }
   #app { width: 100%; max-width: 460px; }
   h1 { font-size: 20px; margin: 0 0 2px; letter-spacing: .5px; }

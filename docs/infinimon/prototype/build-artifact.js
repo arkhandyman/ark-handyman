@@ -24,5 +24,21 @@ if (!html.includes(TAG)) {
 const out = html.replace(TAG, '<script>\n' + engine + '\n</script>');
 const target = path.join(dir, 'play.html');
 fs.writeFileSync(target, out);
-
 console.log('Wrote ' + target + '  (' + (out.length / 1024).toFixed(1) + ' KB)');
+
+/*
+ * A published Artifact supplies its own <!doctype>/<html>/<head>/<body>, so the
+ * hosted build has to be body content only — style, markup, script, nothing
+ * else. Same bytes otherwise.
+ */
+const bodyMatch = out.match(/<body>([\s\S]*)<\/body>/);
+const styleMatch = out.match(/<style>[\s\S]*?<\/style>/);
+if (!bodyMatch || !styleMatch) {
+  console.error('Could not split index.html into style + body — aborting artifact build.');
+  process.exit(1);
+}
+
+const hosted = styleMatch[0] + '\n' + bodyMatch[1].trim() + '\n';
+const hostedTarget = path.join(dir, 'artifact.html');
+fs.writeFileSync(hostedTarget, hosted);
+console.log('Wrote ' + hostedTarget + '  (' + (hosted.length / 1024).toFixed(1) + ' KB)');
