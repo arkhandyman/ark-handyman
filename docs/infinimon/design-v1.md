@@ -1,10 +1,27 @@
 # Infinimon — Design Document v1
 
-**Status:** Draft. Sections 1–6 (the game). Sections 7–10 (stats detail, story spine, art spec, cut list) pending.
+**Status:** Draft, sections 1–10 complete.
 
 **Scope target for v1:** 6 elements · 12 tameable base monsters · 15 bred hybrids · ~27 total dex · single-player · local save · no backend.
 
+> **All names in this document are placeholders.** See [`naming.md`](./naming.md) for the full register, the convention behind each name, and a column to record your final choices. Creature design is founder-led (§9) — names and designs are yours to set.
+
 > This folder is self-contained and portable — it's expected to move to its own repository once the project starts building.
+
+## Contents
+
+| § | Section | |
+|---|---|---|
+| 1 | [Core Loop](#1-core-loop) | What the player does |
+| 2 | [Elements](#2-elements) | Six-element cycle, matchup grid, 15 hybrids |
+| 3 | [Base Roster](#3-base-roster) | The 12 tameable monsters |
+| 4 | [Taming](#4-taming--attunement) | Attunement |
+| 5 | [Battle](#5-battle) | Turn structure, Focus, damage formula |
+| 6 | [Breeding](#6-breeding) | Pairing rules, inheritance, Rare Bloom |
+| 7 | [Stats & Leveling](#7-stats--leveling) | Growth curve, XP, Bond |
+| 8 | [Story Spine](#8-story-spine) | Four characters, three acts, six beats |
+| 9 | [Art Specification](#9-art-specification) | Sketch → AI refinement pipeline, sprite specs |
+| 10 | [Not in v1](#10-explicitly-not-in-v1) | The cut list |
 
 ---
 
@@ -232,6 +249,14 @@ You cannot open with your best move and you cannot spam it. This gives fights a 
 
 Each monster carries **4 moves**. A move has: name, element, power, Focus cost, and an optional effect.
 
+| Tier | Power | Focus cost |
+|---|---|---|
+| Basic | 25 | 0 |
+| Standard | 40 | 1 |
+| Strong | 65 | 3 |
+
+A typical turn uses Basic or Standard; Strong moves are what you save Focus for. Fights pace around the Basic/Standard tiers, so the turn counts below assume those.
+
 ### Damage formula
 
 ```
@@ -253,32 +278,39 @@ damage = round(
 | `K` | **0.6** — the global balance constant |
 | `Variance` | random 0.9 – 1.1 |
 
+The level term is `(1 + Level / 40)`, not `Level / 25`. See §7 — stats already grow proportionally, so a steep level term would double-scale damage.
+
 **`K` is the primary tuning knob.** Lower it for longer fights, raise it for faster ones. Everything else can stay fixed while this is tuned.
 
 ### Stat growth
 
-| Stat | Growth per level |
-|---|---|
-| HP | base + (Level × 4) |
-| ATK / DEF / SPD | base + (Level × 2) |
+Defined in §7. All four stats grow proportionally: `stat = round(base × (1 + Level / 20))`.
 
 ### Worked example (validates the numbers)
 
-Both monsters at level 5, so stats are base + growth: Wickle ATK 60+10 = **70**, DEF 25+10 = **35**, HP 35+20 = **55**. Puddlup ATK 35+10 = **45**, DEF 55+10 = **65**, HP 60+20 = **80**.
+At level 5 every stat is `base × 1.25`, and the level term is `1 + 5/40 = 1.125`.
 
-Wickle attacks Puddlup with a Power-40 Ember move (Ember into Tide is 0.75):
-
-```
-40 × (70 / 115) × 1.2 × 0.75 × 0.6  ≈  13
-13 / 80 HP  →  ~16% per hit  →  ~6-7 turns
-```
-
-Puddlup attacks Wickle with a Power-40 Tide move (Tide into Ember is 1.5):
+Wickle attacks Puddlup with a Standard (Power 40) Ember move — Ember into Tide is 0.75:
 
 ```
-40 × (45 / 85) × 1.2 × 1.5 × 0.6  ≈  23
-23 / 55 HP  →  ~42% per hit  →  ~3 turns
+Wickle ATK 60 → 75.  Puddlup DEF 55 → 69, HP 60 → 75.
+
+40 × (75 / 119) × 1.125 × 0.75 × 0.6  ≈  13
+13 / 75 HP  →  ~17% per hit  →  ~6 turns
 ```
+
+Puddlup attacks Wickle with the same tier Tide move — Tide into Ember is 1.5:
+
+```
+Puddlup ATK 35 → 44.  Wickle DEF 25 → 31, HP 35 → 44.
+
+40 × (44 / 81) × 1.125 × 1.5 × 0.6  ≈  22
+22 / 44 HP  →  ~50% per hit  →  ~2-3 turns
+```
+
+**The same pair at level 25** (stats × 2.25, level term 1.625) gives ~17% and ~51% per hit — near-identical ratios. Proportional growth is what keeps fight length stable across the whole curve; this was verified, not assumed.
+
+**Expected spread:** a lopsided matchup (frail attacker, tanky defender, type advantage) resolves in 2–3 turns. An even matchup on Basic/Standard moves runs 5–7. That spread is intended — type advantage should feel decisive, and the slow end leaves room to stop at the 50% and 25% HP thresholds taming needs.
 
 **Target: 3–7 turn fights.** Type advantage roughly doubles your damage — decisive but not instant, and slow enough that you can stop at the 50%/25% HP thresholds taming needs.
 
@@ -348,9 +380,228 @@ This is the entire chase mechanic for v1. It gives collectible rarity without ne
 
 ---
 
+---
+
+## 7. Stats & Leveling
+
+### The five stats
+
+| Stat | Range (base) | Role |
+|---|---|---|
+| **HP** | 30–60 | Damage absorbed before fainting |
+| **ATK** | 35–60 | Damage dealt |
+| **DEF** | 25–65 | Damage reduced |
+| **SPD** | 15–75 | Turn order; also the widest spread, so it's the most character-defining stat |
+| **Bond** | 0–100 | Not a combat stat — see below |
+
+### Stat growth
+
+```
+stat = round( base × (1 + Level / 20) )
+```
+
+All four combat stats grow at the same proportional rate. This matters more than it looks:
+
+Flat growth (`base + Level × 2`) narrows every ratio as levels climb — Pebbet's DEF starts 2.6× Wickle's and drifts toward 1.5×, so by endgame every monster converges toward mush. Proportional growth holds Pebbet at 2.6× forever. **A monster's identity is its stat shape, and the shape has to survive the level curve.**
+
+At max level a base stat of 60 becomes 135; a base stat of 25 becomes 56.
+
+### Level curve
+
+- **Max level: 25** for v1
+- XP required for the next level: `round(15 × Level^1.5)`
+- A wild win awards **40–120 XP**, scaled by the level gap — beating something above you pays much better than farming things below you
+- **XP is shared across your party of 3**, so your whole team advances together and swapping in a fresh monster isn't punished
+
+Total to max is roughly 30,000 XP — on the order of 300 battles for a single monster, which fits a 15–20 hour v1 without becoming a grind.
+
+### Bond
+
+Bond is the mechanical trace of how you got a monster and what you've done together.
+
+| Event | Bond |
+|---|---|
+| Tamed through Attunement | starts at **30** |
+| Hatched in the Resonance Chamber | starts at **50** — bred monsters are family |
+| Win a battle with it on the field | +2 |
+| It faints | −5 |
+| Feed it a matching-element crystal | +5 (once per day) |
+
+At **Bond ≥ 60** the monster gets the `BondBonus` of 1.05 from §5.
+
+Bond exists to make the theme mechanical: monsters you earned and raised outperform monsters you merely acquired. It's also the hook for showing what's wrong with Meridian's method — extracted monsters sit at Bond 0 and are visibly unstable in battle, which is why the antagonists' teams underperform their levels.
+
+### Inheritance
+
+Covered in §6 — offspring average their parents per stat with a 25% chance per stat to inherit the higher value. Bond does not inherit; it starts at 50 for every hatch.
+
+---
+
+## 8. Story Spine
+
+> Every proper noun in this section is a **placeholder**. See `naming.md` for the full register and the conventions behind each. Names are yours to set.
+
+### The family
+
+Four playable characters, one household of scientists. You pick one at the start.
+
+| Character | Role | Angle |
+|---|---|---|
+| **Father** | Field biologist, ex-Meridian | Quit the company when he saw an extraction firsthand. Knows how they operate. |
+| **Mother** | Rift physicist | Built the Resonator. The reason the family can cross at all. |
+| **Son** (~14) | Behavioral prodigy | Reads monster body language better than any instrument. |
+| **Daughter** (~12) | Self-taught engineer | Keeps the Lab running; built half of it from salvage. |
+
+**Recommendation — cosmetic only in v1.** Each character gets their own portrait, dialogue voice, and corner of the Lab, but identical mechanics. This answers the open question from the last pass: character perks would multiply the balance work across every encounter for replay value that a v1 doesn't yet need. It also keeps the pitch honest — a parent and a child genuinely play the same game, at the same difficulty, and can talk to each other about it.
+
+### The antagonist
+
+**Meridian Dynamics** — a research corporation that opened the first stable rift and turned it into a supply chain. They extract Infinimon with **containment lattices**: fast, forced, and effective. Their director, **Dr. Halcyon Reeve**, is not a cackling villain — he believes he's securing a resource that will solve real problems on Earth, and the game should let him make that argument well.
+
+### Three acts, six beats
+
+**Act I — The Rift**
+
+1. **First Contact** *(tutorial)* — A micro-rift opens in the family's backyard lab and a single Infinimon comes through, frightened. You attune to it. This is your starter, and it teaches battle and taming in one continuous scene rather than two tutorials.
+2. **The Extraction** — You witness a Meridian crew lattice an entire wild herd. You are too small to stop it, and the game does not let you. Picking through the site afterward you recover a dropped **Rift Catalyst** — which unlocks the Resonance Chamber and your first hybrid. The inciting injury and the core mechanic arrive in the same beat.
+
+**Act II — The Other Side**
+
+3. **Crossing** — The family stabilizes a gate and reaches the native world. New zones, wild hybrids, and the first real scale of the damage: habitats that are simply empty.
+4. **The Defector** — A Meridian researcher makes contact and trades the location of the main facility for protection. First major battle, against a company handler fielding extracted monsters — high level, Bond 0, visibly unstable. The player *feels* the Bond system land here.
+
+**Act III — Collapse**
+
+5. **The Facility** — Infiltration. The reveal: extraction is destabilizing the rift itself. The native world is collapsing *because* of the harvest. This raises the stakes past "poaching is wrong" into something the player can't just walk away from.
+6. **The Choice** — Confronting Reeve, the obvious solution — close the rift — would strand every extracted monster on the wrong side of it forever. The endgame is a release-and-return sequence: you have to give monsters *back*, using bonding rather than battling, before the rift can close.
+
+**The theme, mechanized:** they take, you return. The final sequence should be the one place where the game's central verb is giving a monster up — and it should cost the player something real to do it.
+
+### Tone
+
+Adventure, not grimdark. Children are a target audience. No monster dies; extracted monsters are "destabilized" and always recoverable. The corporation is wrong, not evil — and the strongest version of this story lets a kid and an adult read Reeve's argument differently.
+
+---
+
+## 9. Art Specification
+
+### The pipeline
+
+Creature design is **founder-led**. The workflow is your drawings refined by AI, never AI generating creatures from prompts.
+
+```
+1. YOU SKETCH        rough pencil or tablet — silhouette and key features.
+                     Does not need to be clean.
+        ↓
+2. STYLE BIBLE       2-3 monsters finished fully by hand, first, as anchors.
+                     Locks line weight, palette, proportion, eye style, shading.
+        ↓
+3. AI REFINEMENT     image-to-image, conditioned on your sketch AND on the
+                     style bible. Cleanup and consistency, not invention.
+        ↓
+4. HUMAN PASS        every output gets manual correction. Non-negotiable.
+        ↓
+5. EXPORT            standardized sprite frames.
+```
+
+**Step 2 is the one people skip, and it's the one that decides whether this works.** Without hand-finished anchors, AI refinement drifts, and 27 monsters end up looking like 27 different games. Finish two or three completely by hand before refining anything.
+
+**Step 4 is also non-negotiable.** AI reliably breaks limb counts, symmetry, and small details, and players notice on a creature they're going to look at a thousand times.
+
+### Two practical cautions
+
+**Keep every original sketch.** Refining your own drawings puts you in a much stronger position than generating from text prompts — commercially and creatively. Your sketches are evidence of human authorship, which matters if this ever earns money, gets licensed, or needs copyright registration. Archive them with dates alongside the finished art.
+
+**Plan on disclosure.** App Store and Play Store policies around AI-assisted content have been tightening. Building the "human-authored, AI-refined" record from day one means disclosure is a checkbox later rather than a scramble.
+
+### Sprite specs
+
+| Property | Value |
+|---|---|
+| Source canvas | 512 × 512, transparent |
+| Battle export | 256 × 256 |
+| UI / dex export | 128 × 128 |
+| List / party icon | 64 × 64 |
+| States in v1 | **idle**, **attack**, **hurt** — 3 static frames minimum |
+| Full animation | v2 |
+
+**The 64px test:** every design has to stay recognizable at 64 × 64. If it doesn't read at icon size, the design is wrong — no amount of detail at 512 rescues it. Most mobile players see the small size more often than the large one.
+
+### Style targets
+
+- Bold, consistent outline weight
+- Flat color plus a single shadow tone — cheap to produce, reads at any size, ages well
+- Silhouette-first: each monster should be identifiable as a pure black shape
+- High contrast against both light and dark backgrounds
+
+### Palette
+
+Six element palettes, five tones each (highlight / light / base / shadow / outline), plus a shared neutral ramp for eyes, teeth, claws, and UI. Hybrids draw from both parent palettes — typically the base body from the primary element and accents from the secondary.
+
+### UI screens for v1
+
+| # | Screen | Notes |
+|---|---|---|
+| 1 | Title & character select | Four family portraits |
+| 2 | Zone map | Discrete zones, not open world |
+| 3 | Battle | The screen that gets the most polish |
+| 4 | Attunement | The frequency-bar minigame |
+| 5 | Party management | 3 active + reserve |
+| 6 | Infinidex | 27 entries, with silhouettes for undiscovered |
+| 7 | Resonance Chamber | Breeding, egg status, Charge meter |
+| 8 | Inventory | Crystals, catalysts |
+| 9 | Dialogue / cutscene | Portrait + text box |
+| 10 | Settings | Audio, text size, save |
+
+---
+
+## 10. Explicitly Not in v1
+
+The purpose of this list is to make scope creep argue its way in. Everything below is a reasonable idea that has been deliberately cut.
+
+### Cut — infrastructure
+
+| Cut | Why |
+|---|---|
+| Accounts, cloud save, backend | Local save covers a single-player v1 entirely |
+| Global species supply caps | Requires server-authoritative state; Rare Bloom (§6) delivers rarity without it |
+| Trading, PvP, any multiplayer | Multiplies scope; needs the backend above |
+| Player chat | COPPA exposure with a child audience, for near-zero v1 value |
+| Monetization / IAP | Ship something people like first |
+
+### Cut — game systems
+
+| Cut | Why |
+|---|---|
+| Hybrid × hybrid breeding | The headline v2 feature; keeps the v1 dex hand-drawable at 27 |
+| Recessive / hidden genes | Invisible depth is wasted across only 15 hybrids |
+| Held items, abilities, natures | The classic "second layer" — each one multiplies balance work |
+| More than 3 status effects | Three is enough to make type identity legible |
+| Weather, day/night cycles | Content multiplier with no v1 payoff |
+| Open-world traversal | Zones are discrete rooms on a map |
+| Side quests beyond the 6 story beats | Main line first |
+
+### Cut — production
+
+| Cut | Why |
+|---|---|
+| Character customization | Wanted, and explicitly a v2 feature — it needs a modular art pipeline the 27-monster scope doesn't otherwise require |
+| Full sprite animation | 3 static states ship; animation is polish |
+| Voice acting | Text only |
+| Original soundtrack | Licensed or minimal audio for v1 |
+| Mobile builds | Web first. Capacitor wrap after the web version is fun |
+| Localization | English only |
+
+### The one rule
+
+If something on this list gets promoted into v1, something else has to come off. The list is a budget, not a wishlist.
+
+---
+
 ## Open questions for the next pass
 
-1. **Move pools.** 27 species × 4 moves is the largest remaining content task in the game section. Needs its own pass.
-2. **Zone layout.** How many explorable areas, and which species spawn where — this is the actual difficulty curve.
-3. **Does the family choice change anything mechanically?** Four characters (father, mother, son, daughter) could be purely cosmetic, or each could carry a small perk. Cosmetic-only is safer for balance and much cheaper to build.
-4. **Validate `K = 0.6`** by simulating a few hundred battles once the prototype exists. The worked examples above are arithmetic, not playtesting.
+1. **Move pools.** 27 species × 4 moves is the single largest remaining content task. Needs its own pass, and it's the last thing blocking a full prototype.
+2. **Zone layout.** How many zones, which species spawn where, at what levels — this *is* the difficulty curve, and it can't be designed until move pools exist.
+3. **Names.** Everything invented so far is a placeholder. See `naming.md`.
+4. **Validate `K = 0.6` in simulation.** The §5 examples are now verified arithmetic at two points on the level curve, which is enough to justify building — but it is still not playtesting. A few hundred simulated battles across matchups is the actual check.
+5. **Audio.** Untouched so far. Low risk, but it needs an owner eventually.
