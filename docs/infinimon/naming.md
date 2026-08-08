@@ -73,9 +73,50 @@ Renaming a game in pre-production costs an afternoon. Renaming after launch cost
 
 ---
 
-## 3b. Hybrid creatures (15)
+## 3b. Same-element blends (18)
 
-The names above are the **elements**. These are the **creatures** made of them — the species you actually breed and see in your team.
+**The everyday breeding result.** Two creatures of one element with different body
+archetypes combine — a fire fox bred with a fire lizard gives a fire creature
+carrying the fox's head on the lizard's frame.
+
+**Convention:** a compound naming the two archetypes or the trait each parent
+contributes, kept short and pronounceable.
+
+| Element | Parents | Placeholder | Final |
+|---|---|---|---|
+| Spark | Voltmoth + Bolthorn | **Voltram** | |
+| Spark | Voltmoth + Snapcoil | **Coilmoth** | |
+| Spark | Bolthorn + Snapcoil | **Hornsnap** | |
+| Tide | Puddlup + Finwhisk | **Whiskpool** | |
+| Tide | Puddlup + Brineclaw | **Poolclaw** | |
+| Tide | Finwhisk + Brineclaw | **Clawfin** | |
+| Ember | Wickle + Scorchtail | **Scorchkit** | |
+| Ember | Wickle + Coalpaw | **Coalkit** | |
+| Ember | Coalpaw + Scorchtail | **Cindermaw** | |
+| Verdant | Sproutle + Thornip | **Thornsprout** | |
+| Verdant | Sproutle + Fernfawn | **Leaffawn** | |
+| Verdant | Thornip + Fernfawn | **Bramblefawn** | |
+| Terra | Pebbet + Burrowl | **Shellowl** | |
+| Terra | Pebbet + Shalebug | **Cragshell** | |
+| Terra | Burrowl + Shalebug | **Beetlebeak** | |
+| Gale | Kitewing + Ruffle | **Kiteplume** | |
+| Gale | Kitewing + Breezel | **Glidetail** | |
+| Gale | Ruffle + Breezel | **Windruff** | |
+
+**Notes:**
+- Each blend also carries a **look** line in `prototype/engine.js` under `BLENDS`,
+  describing which features come from which parent. Those are the seeds for your
+  designs, not constraints.
+- `Scorchkit` is the one from your example — fox ears and brush tail on a lizard frame.
+- `Coalkit` and `Scorchkit` are close in sound and both Ember. Worth separating.
+
+---
+
+## 3c. Rare hybrid creatures (15)
+
+The creatures produced by the **rare** cross-element fusion (§3 lists those elements).
+Only about 1 in 10 cross-element pairings actually fuses, and the egg takes roughly
+three times as long to hatch — so these are a genuine discovery.
 
 **Convention:** same as the base roster — a compound of an element trait and a creature or body noun, two syllables where possible, pronounceable by a young child.
 
@@ -105,7 +146,7 @@ The names above are the **elements**. These are the **creatures** made of them �
 
 ---
 
-## 4. Base monsters (12)
+## 4. Base creatures (18)
 
 **Convention:** a portmanteau or compound of a trait and an animal, kept pronounceable by a young child, two syllables where possible. Deliberately avoiding the `-mon` / `-chu` / `-saur` endings that read as derivative.
 
@@ -123,6 +164,12 @@ The names above are the **elements**. These are the **creatures** made of them �
 | **Burrowl** | Terra | burrow + owl | |
 | **Kitewing** | Gale | kite + wing | |
 | **Ruffle** | Gale | ruffled feathers | |
+| **Snapcoil** | Spark | snap + coil (serpent) | |
+| **Brineclaw** | Tide | brine + claw (crab) | |
+| **Scorchtail** | Ember | scorch + tail (lizard) | |
+| **Fernfawn** | Verdant | fern + fawn (deer) | |
+| **Shalebug** | Terra | shale + bug (beetle) | |
+| **Breezel** | Gale | breeze + weasel | |
 
 **Notes:**
 - `Wickle`, `Sproutle`, and `Pebbet` all use the same `-le/-et` diminutive. Three is arguably one too many of the same trick.

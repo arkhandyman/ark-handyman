@@ -392,20 +392,79 @@
    * spread. Totals now range 170-191 — fast, frail monsters need a slightly
    * larger budget because SPD buys less than HP and DEF do.
    */
+  /*
+   * Three creatures per element, each with a distinct body ARCHETYPE.
+   *
+   * The archetype is what makes blending mean something: a fire fox bred with a
+   * fire lizard produces a fire creature carrying the fox's head and markings on
+   * the lizard's frame. Element decides the palette; the two archetypes decide
+   * the silhouette. Without this field, "they combine" has nothing to combine.
+   *
+   * Stat lines are solved by autobalance.js, never hand-assigned — see §7.
+   */
   const SPECIES = [
-    { id: 'voltmoth', name: 'Voltmoth', element: 'spark',   hp: 36, atk: 56, def: 25, spd: 65, rarity: 'common',   look: 'Pale moth, lightning veins in its wings' },
-    { id: 'bolthorn', name: 'Bolthorn', element: 'spark',   hp: 53, atk: 48, def: 43, spd: 30, rarity: 'uncommon', look: 'Stocky ram, charge arcing between horns' },
-    { id: 'puddlup',  name: 'Puddlup',  element: 'tide',    hp: 60, atk: 35, def: 55, spd: 30, rarity: 'common',   look: 'Round puddle-creature, oversized eyes' },
-    { id: 'finwhisk', name: 'Finwhisk', element: 'tide',    hp: 41, atk: 51, def: 30, spd: 60, rarity: 'common',   look: 'Darting fish-otter with whisker fins' },
-    { id: 'wickle',   name: 'Wickle',   element: 'ember',   hp: 36, atk: 61, def: 25, spd: 60, rarity: 'common',   look: 'Fox kit with a candle-flame tail' },
-    { id: 'coalpaw',  name: 'Coalpaw',  element: 'ember',   hp: 52, atk: 56, def: 42, spd: 20, rarity: 'rare',     look: 'Heavy badger, glowing cracks in its hide' },
-    { id: 'sproutle', name: 'Sproutle', element: 'verdant', hp: 55, atk: 40, def: 55, spd: 30, rarity: 'common',   look: 'Sapling creature with leaf-bud ears' },
-    { id: 'thornip',  name: 'Thornip',  element: 'verdant', hp: 39, atk: 59, def: 30, spd: 50, rarity: 'common',   look: 'Bristly root-rodent, thorn ridge' },
-    { id: 'pebbet',   name: 'Pebbet',   element: 'terra',   hp: 60, atk: 40, def: 65, spd: 15, rarity: 'uncommon', look: 'Small stone tortoise, moss on the shell' },
-    { id: 'burrowl',  name: 'Burrowl',  element: 'terra',   hp: 44, atk: 49, def: 39, spd: 45, rarity: 'uncommon', look: 'Owl with earth feathers and digging talons' },
-    { id: 'kitewing', name: 'Kitewing', element: 'gale',    hp: 33, atk: 50, def: 33, spd: 75, rarity: 'rare',     look: 'Paper-thin gliding manta, translucent' },
-    { id: 'ruffle',   name: 'Ruffle',   element: 'gale',    hp: 48, atk: 48, def: 39, spd: 40, rarity: 'common',   look: 'Puffed-up bird, permanently windswept' },
+    // Spark — moth, ram, serpent
+    { id: 'voltmoth', name: 'Voltmoth', element: 'spark',   archetype: 'moth',     hp: 36, atk: 56, def: 25, spd: 65, rarity: 'common',   look: 'Pale moth, lightning veins in its wings' },
+    { id: 'bolthorn', name: 'Bolthorn', element: 'spark',   archetype: 'ram',      hp: 54, atk: 49, def: 43, spd: 30, rarity: 'uncommon', look: 'Stocky ram, charge arcing between horns' },
+    { id: 'snapcoil', name: 'Snapcoil', element: 'spark',   archetype: 'serpent',  hp: 39, atk: 54, def: 29, spd: 55, rarity: 'common',   look: 'Ribbon-thin serpent that snaps like a live wire' },
+    // Tide — blob, otter, crab
+    { id: 'puddlup',  name: 'Puddlup',  element: 'tide',    archetype: 'blob',     hp: 61, atk: 35, def: 56, spd: 30, rarity: 'common',   look: 'Round puddle-creature, oversized eyes' },
+    { id: 'finwhisk', name: 'Finwhisk', element: 'tide',    archetype: 'otter',    hp: 40, atk: 50, def: 30, spd: 60, rarity: 'common',   look: 'Darting fish-otter with whisker fins' },
+    { id: 'brineclaw',name: 'Brineclaw',element: 'tide',    archetype: 'crab',     hp: 50, atk: 45, def: 59, spd: 25, rarity: 'uncommon', look: 'Barnacled crab with one oversized claw' },
+    // Ember — fox, badger, lizard
+    { id: 'wickle',   name: 'Wickle',   element: 'ember',   archetype: 'fox',      hp: 36, atk: 60, def: 25, spd: 60, rarity: 'common',   look: 'Fox kit with a candle-flame tail' },
+    { id: 'coalpaw',  name: 'Coalpaw',  element: 'ember',   archetype: 'badger',   hp: 52, atk: 56, def: 42, spd: 20, rarity: 'rare',     look: 'Heavy badger, glowing cracks in its hide' },
+    { id: 'scorchtail',name:'Scorchtail',element:'ember',   archetype: 'lizard',   hp: 44, atk: 54, def: 39, spd: 40, rarity: 'common',   look: 'Sun-basking lizard whose tail burns like a wick' },
+    // Verdant — sapling, rodent, deer
+    { id: 'sproutle', name: 'Sproutle', element: 'verdant', archetype: 'sapling',  hp: 56, atk: 41, def: 56, spd: 30, rarity: 'common',   look: 'Sapling creature with leaf-bud ears' },
+    { id: 'thornip',  name: 'Thornip',  element: 'verdant', archetype: 'rodent',   hp: 39, atk: 60, def: 30, spd: 50, rarity: 'common',   look: 'Bristly root-rodent, thorn ridge' },
+    { id: 'fernfawn', name: 'Fernfawn', element: 'verdant', archetype: 'deer',     hp: 45, atk: 45, def: 35, spd: 55, rarity: 'uncommon', look: 'Slender fawn with fern fronds for a tail' },
+    // Terra — tortoise, owl, beetle
+    { id: 'pebbet',   name: 'Pebbet',   element: 'terra',   archetype: 'tortoise', hp: 61, atk: 41, def: 66, spd: 15, rarity: 'uncommon', look: 'Small stone tortoise, moss on the shell' },
+    { id: 'burrowl',  name: 'Burrowl',  element: 'terra',   archetype: 'owl',      hp: 45, atk: 50, def: 40, spd: 45, rarity: 'uncommon', look: 'Owl with earth feathers and digging talons' },
+    { id: 'shalebug', name: 'Shalebug', element: 'terra',   archetype: 'beetle',   hp: 50, atk: 45, def: 55, spd: 30, rarity: 'common',   look: 'Beetle plated in flat shale, dusty underneath' },
+    // Gale — manta, bird, weasel
+    { id: 'kitewing', name: 'Kitewing', element: 'gale',    archetype: 'manta',    hp: 33, atk: 50, def: 33, spd: 75, rarity: 'rare',     look: 'Paper-thin gliding manta, translucent' },
+    { id: 'ruffle',   name: 'Ruffle',   element: 'gale',    archetype: 'bird',     hp: 48, atk: 48, def: 39, spd: 40, rarity: 'common',   look: 'Puffed-up bird, permanently windswept' },
+    { id: 'breezel',  name: 'Breezel',  element: 'gale',    archetype: 'weasel',   hp: 40, atk: 50, def: 35, spd: 55, rarity: 'common',   look: 'Long weasel that runs just ahead of the wind' },
   ];
+
+  /*
+   * Same-element blends — the everyday breeding result (§6).
+   *
+   * One per pair of archetypes within an element: 3 pairs x 6 elements = 18.
+   * Keyed by the two parent species ids, sorted, so a pairing is deterministic
+   * in either order. Names are placeholders; see naming.md.
+   */
+  const BLENDS = {
+    // Spark
+    'bolthorn|voltmoth':  { name: 'Voltram',      look: 'Ram\'s curled horns on a moth\'s furred, winged body' },
+    'snapcoil|voltmoth':  { name: 'Coilmoth',     look: 'Serpentine body trailing four ragged moth wings' },
+    'bolthorn|snapcoil':  { name: 'Hornsnap',     look: 'Horned serpent that rears and butts like a ram' },
+    // Tide
+    'finwhisk|puddlup':   { name: 'Whiskpool',    look: 'Otter shape that keeps half-melting back into water' },
+    'brineclaw|puddlup':  { name: 'Poolclaw',     look: 'Soft puddle body with one heavy barnacled claw' },
+    'brineclaw|finwhisk': { name: 'Clawfin',      look: 'Sleek otter with crab plating along its back' },
+    // Ember
+    'scorchtail|wickle':  { name: 'Scorchkit',    look: 'Fox\'s ears and brush tail on a lean lizard frame' },
+    'coalpaw|wickle':     { name: 'Coalkit',      look: 'Fox-faced, badger-built, cracks glowing at the joints' },
+    'coalpaw|scorchtail': { name: 'Cindermaw',    look: 'Broad badger jaw on a low, scaled, ember-lit body' },
+    // Verdant
+    'sproutle|thornip':   { name: 'Thornsprout',  look: 'Rodent curled inside a sapling\'s split trunk' },
+    'fernfawn|sproutle':  { name: 'Leaffawn',     look: 'Fawn with a sapling\'s bud-crown and bark-flecked legs' },
+    'fernfawn|thornip':   { name: 'Bramblefawn',  look: 'Fawn wearing a bristling thorn mantle' },
+    // Terra
+    'burrowl|pebbet':     { name: 'Shellowl',     look: 'Owl hunched under a mossy tortoise shell' },
+    'pebbet|shalebug':    { name: 'Cragshell',    look: 'Tortoise shell layered in overlapping shale plates' },
+    'burrowl|shalebug':   { name: 'Beetlebeak',   look: 'Beetle carapace split by a hooked owl\'s beak' },
+    // Gale
+    'kitewing|ruffle':    { name: 'Kiteplume',    look: 'Translucent glider edged in soft feather down' },
+    'breezel|kitewing':   { name: 'Glidetail',    look: 'Long weasel with a manta\'s membrane between its limbs' },
+    'breezel|ruffle':     { name: 'Windruff',     look: 'Feather-ruffed weasel, permanently mid-gust' },
+  };
+
+  const blendKey = (idA, idB) => [idA, idB].sort().join('|');
+  const blendFor = (idA, idB) => BLENDS[blendKey(idA, idB)] || null;
 
   const speciesById = (id) => SPECIES.find((s) => s.id === id);
 
@@ -896,77 +955,142 @@
   // Breeding should be worth doing. Offspring target this multiple of the
   // parents' average power.
   const HYBRID_POWER_BONUS = 1.10;
+  const BLEND_POWER_BONUS = 1.09;
   const REFINED_POWER_BONUS = 1.06;
 
+  /*
+   * Charge needed to hatch, by outcome. This is what makes "some hatch earlier
+   * than others" true: a blend is quick, a cross-element hybrid takes roughly
+   * three times as long. Rarity and patience reinforce each other.
+   */
+  const HATCH_CHARGE = {
+    refined: 40,    // same species paired with itself
+    blend: 65,      // same element, different archetypes — the everyday result
+    throwback: 65,  // cross-element that failed to fuse
+    hybrid: 190,    // the rare one
+  };
+
+  // Chance a cross-element pairing actually fuses. Cross-element hybrids are
+  // meant to be a discovery, not a menu selection.
+  const HYBRID_SUCCESS_CHANCE = 0.10;
+
+  /**
+   * Breed two creatures. Returns an EGG — the result is decided now but stays
+   * hidden until the egg hatches (§6).
+   *
+   *   same species          -> refined line
+   *   same element, differing archetypes -> BLEND (the everyday case)
+   *   different elements    -> 10% true hybrid, otherwise a throwback to one
+   *                            parent's species
+   */
   function breed(a, b, rng) {
     const elsA = a.elements;
     const elsB = b.elements;
 
-    // v1 does not support hybrid x hybrid (§6).
     if (elsA.length > 1 || elsB.length > 1) {
-      return { error: 'Hybrid pairs are a v2 feature — breed two base monsters.' };
+      return { error: 'Bred creatures can\'t breed again yet — pair two you caught.' };
+    }
+    if (a.uid === b.uid) {
+      return { error: 'A creature can\'t pair with itself.' };
     }
 
     const sameElement = elsA[0] === elsB[0];
-    const elements = sameElement ? [elsA[0]] : orderElements(elsA[0], elsB[0]);
 
     // Inherited line: average the parents, with a chance at the better value.
-    // This is what makes two Steams from different parents differ.
+    // This is what makes two Scorchkits from different parents differ.
     const inherited = {};
     for (const key of STAT_KEYS) {
       const av = a.bases[key];
       const bv = b.bases[key];
-      let value = rng() < 0.25 ? Math.max(av, bv) : (av + bv) / 2;
+      const value = rng() < 0.25 ? Math.max(av, bv) : (av + bv) / 2;
       inherited[key] = value * range(rng, 0.94, 1.06);
     }
 
     const parentPower = (powerOf(a.bases) + powerOf(b.bases)) / 2;
     const rareBloom = rng() < RARE_BLOOM_CHANCE;
 
-    let bases, name, speciesId = null, profile = null;
-    const hybrid = sameElement ? null : hybridName(elements[0], elements[1]);
+    let kind, elements, bases, name, look = null, personality = null;
+    let speciesId = null, profile = null, hybrid = null;
 
     if (sameElement) {
-      // Same-element pairing refines the line rather than reshaping it: no
-      // bias, just a modest power lift over the parents.
-      bases = fitToPower(inherited, { hp: 1, atk: 1, def: 1, spd: 1 },
-        parentPower * REFINED_POWER_BONUS);
-      const parent = rng() < 0.5 ? a : b;
-      name = parent.name;
-      speciesId = parent.speciesId;
-    } else {
+      elements = [elsA[0]];
+      const blend = a.speciesId && b.speciesId ? blendFor(a.speciesId, b.speciesId) : null;
+
+      if (blend) {
+        // The everyday case: two archetypes of one element combine.
+        kind = 'blend';
+        name = blend.name;
+        look = blend.look;
+        bases = fitToPower(inherited, { hp: 1, atk: 1, def: 1, spd: 1 },
+          parentPower * BLEND_POWER_BONUS);
+      } else {
+        // Same species paired together — refine the line instead.
+        kind = 'refined';
+        const parent = rng() < 0.5 ? a : b;
+        name = parent.name;
+        speciesId = parent.speciesId;
+        bases = fitToPower(inherited, { hp: 1, atk: 1, def: 1, spd: 1 },
+          parentPower * REFINED_POWER_BONUS);
+      }
+    } else if (rng() < HYBRID_SUCCESS_CHANCE) {
+      // The rare one — two elements genuinely fuse.
+      kind = 'hybrid';
+      elements = orderElements(elsA[0], elsB[0]);
+      hybrid = hybridName(elements[0], elements[1]);
       profile = HYBRID_PROFILES[hybrid];
-      // powerMult compensates for shape extremity. Equal power does NOT mean
-      // equal strength — the same lesson the 180-point stat budget taught in §7,
-      // so these are solved empirically by `node hybrids.js solve`.
+      name = profile.name;
+      look = profile.look;
+      personality = profile.personality;
+      // powerMult compensates for shape extremity — equal power is NOT equal
+      // strength. Solved empirically by `node hybrids.js solve`.
       bases = fitToPower(inherited, profile.bias,
         parentPower * HYBRID_POWER_BONUS * (profile.powerMult || 1));
-      name = profile.name;
+    } else {
+      // The resonance didn't hold. The egg carries one parent's line through.
+      kind = 'throwback';
+      const parent = rng() < 0.5 ? a : b;
+      elements = [parent.elements[0]];
+      name = parent.name;
+      speciesId = parent.speciesId;
+      bases = fitToPower(inherited, { hp: 1, atk: 1, def: 1, spd: 1 },
+        parentPower * REFINED_POWER_BONUS);
     }
 
     const child = createMonster({
-      speciesId,
-      elements,
-      bases,
-      name,
+      speciesId, elements, bases, name,
       level: 5,
-      bond: 50,       // bred monsters start bonded (§7)
+      bond: 50,       // bred creatures start bonded (§7)
       rareBloom,
       bred: true,
     });
-    if (profile) {
-      child.personality = profile.personality;
-      child.look = profile.look;
-    }
+    if (look) child.look = look;
+    if (personality) child.personality = personality;
 
     return {
-      child,
+      egg: {
+        kind,
+        child,
+        rareBloom,
+        hybridElement: hybrid,
+        element: elements[0],
+        charge: 0,
+        chargeNeeded: HATCH_CHARGE[kind],
+        parents: [a.name, b.name],
+      },
+      kind,
       rareBloom,
-      kind: sameElement ? 'refined' : 'hybrid',
       hybridElement: hybrid,
       profile,
     };
   }
+
+  /** Add Charge to an egg. Returns true once it is ready to hatch. */
+  function feedEgg(egg, amount) {
+    egg.charge = Math.min(egg.chargeNeeded, egg.charge + amount);
+    return egg.charge >= egg.chargeNeeded;
+  }
+
+  const eggReady = (egg) => egg.charge >= egg.chargeNeeded;
 
   // ---------------------------------------------------------------------------
   // Encounters
@@ -990,6 +1114,7 @@
     RARE_BLOOM_CHANCE, STATUSES,
     // data
     ELEMENT_CYCLE, ELEMENTS, SPECIES, HYBRID_NAMES, HYBRID_PROFILES,
+    BLENDS, blendKey, blendFor, HATCH_CHARGE, HYBRID_SUCCESS_CHANCE,
     // helpers
     makeRng, speciesById, typeMultiplier, defenseMultiplier, oppositeElement,
     hybridName, hybridKey, orderElements, statAt, movesFor, powerOf, fitToPower,
@@ -997,7 +1122,7 @@
     createMonster, damage, expectedDamage, chooseMove, chooseWildMove, effectiveSpd,
     createBattle, resolveTurn, activeMonster, affordable,
     canAttune, attune, attuneZoneWidth, attuneSpeed, fleeChanceAfterFailure, ATTUNE,
-    breed, randomWild,
+    breed, feedEgg, eggReady, randomWild,
     // progression
     xpToNext, grantXp, xpForWin, recomputeStats,
   };
@@ -1022,6 +1147,7 @@ const S = {
   dex: new Set(),
   banked: {},
   battle: null,
+  eggs: [],
   wildLevel: 5,
   breedPick: [],
   lastResult: null,
@@ -1071,6 +1197,11 @@ function saveGame() {
       charge: S.charge,
       dex: [...S.dex],
       banked: S.banked,
+      eggs: S.eggs.map((e) => ({
+        k: e.kind, c: e.charge, cn: e.chargeNeeded, el: e.element,
+        rb: !!e.rareBloom, he: e.hybridElement, p: e.parents,
+        ch: packMonster(e.child),
+      })),
     }));
   } catch (e) { /* private browsing or quota — play on without a save */ }
 }
@@ -1087,6 +1218,11 @@ function loadGame() {
     S.charge = d.charge ?? 0;
     S.dex = new Set(d.dex || []);
     S.banked = d.banked || {};
+    S.eggs = (d.eggs || []).map((e) => ({
+      kind: e.k, charge: e.c, chargeNeeded: e.cn, element: e.el,
+      rareBloom: e.rb, hybridElement: e.he, parents: e.p,
+      child: unpackMonster(e.ch),
+    }));
     return true;
   } catch (e) { return false; }
 }
@@ -1129,13 +1265,40 @@ function focusPips(n) {
   return s + '</div>';
 }
 
+function eggCard() {
+  if (!S.eggs.length) return '';
+  return `<div class="card">
+    <h2>Incubating (${S.eggs.length}/${MAX_EGGS})</h2>
+    ${S.eggs.map((e, i) => {
+      const pct = Math.round((e.charge / e.chargeNeeded) * 100);
+      const ready = G.eggReady(e);
+      const c = el(e.element).color;
+      return `<div style="margin-bottom:10px">
+        <div class="mon">
+          <div class="blob" style="background:linear-gradient(160deg,${c},#0c1017);
+            border-radius:50% 50% 46% 46% / 60% 60% 40% 40%">${ready ? '!' : '&middot;'}</div>
+          <div style="flex:1;min-width:0">
+            <div class="nm">${ready ? 'Ready to hatch' : 'Egg'}</div>
+            <div class="meta">${esc(e.parents.join(' + '))} &middot;
+              ${e.charge}/${e.chargeNeeded} Charge</div>
+            <div class="bar"><div class="hpfill${ready ? '' : ' mid'}" style="width:${pct}%"></div></div>
+          </div>
+        </div>
+        ${ready ? `<button class="primary" style="margin-top:8px" data-act="hatch" data-i="${i}">Hatch it</button>` : ''}
+      </div>`;
+    }).join('')}
+    <div class="note">Eggs draw Charge from every battle you fight. Rarer results
+    need more of it, so some hatch long before others.</div>
+  </div>`;
+}
+
 function resourceBar() {
   const c = Object.entries(S.crystals).map(([k, v]) =>
     `<span style="color:${el(k).color}">&#9670;</span>${v}`).join(' ');
   return `<div class="res"><span>Crystals ${c}</span>
     <span>Catalysts <b>${S.catalysts}</b></span>
     <span>Charge <b>${S.charge}</b></span>
-    <span>Dex <b>${S.dex.size}</b>/27</span></div>`;
+    <span>Dex <b>${S.dex.size}</b>/${DEX_TOTAL}</span></div>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1166,6 +1329,7 @@ VIEWS.home = () => {
   return `<h1>The Lab</h1>
   <div class="sub">${S.team.length} Infinimon &middot; ${alive} ready</div>
   <div class="card">${resourceBar()}</div>
+  ${eggCard()}
   <div class="card">
     <button class="primary" data-act="explore" ${alive ? '' : 'disabled'}>Explore</button>
     <div class="row" style="margin-top:8px">
@@ -1294,31 +1458,55 @@ VIEWS.lab = () => {
   const eligible = S.team.filter((m) => m.elements.length === 1);
   const [a, b] = S.breedPick.map((uid) => S.team.find((m) => m.uid === uid));
   const ready = a && b && a.uid !== b.uid;
-  const cost = 60;
-  const canBreed = ready && S.catalysts > 0 && S.charge >= cost;
+  const full = S.eggs.length >= MAX_EGGS;
+  const canBreed = ready && S.catalysts > 0 && !full;
 
   return `<h1>Resonance Chamber</h1>
-  <div class="sub">Pair two base Infinimon &middot; hybrid pairs are a v2 feature</div>
+  <div class="sub">Pair two of the same element to blend them</div>
   <div class="card">${resourceBar()}</div>
+  ${eggCard()}
   <div class="card">
     <h2>Select two</h2>
     ${eligible.map((m) => `<button data-act="breedpick" data-uid="${m.uid}"
       class="${S.breedPick.includes(m.uid) ? 'sel' : ''}" style="margin-bottom:8px">
-      ${monRow(m)}</button>`).join('') || '<div class="meta">Tame more Infinimon first.</div>'}
+      ${monRow(m, `<div class="meta">${esc(G.speciesById(m.speciesId)
+        ? G.speciesById(m.speciesId).archetype : 'bred')}</div>`)}</button>`).join('')
+      || '<div class="meta">Tame more Infinimon first.</div>'}
   </div>
   ${ready ? (() => {
-    const hyb = a.elements[0] === b.elements[0] ? null : G.hybridName(a.elements[0], b.elements[0]);
+    const sameEl = a.elements[0] === b.elements[0];
+    const blend = sameEl && a.speciesId && b.speciesId
+      ? G.blendFor(a.speciesId, b.speciesId) : null;
+    const hyb = sameEl ? null : G.hybridName(a.elements[0], b.elements[0]);
     const prof = hyb ? G.HYBRID_PROFILES[hyb] : null;
+
+    let resultLabel, detail, charge;
+    if (blend) {
+      resultLabel = esc(blend.name);
+      detail = `<em>${esc(blend.look)}</em>`;
+      charge = G.HATCH_CHARGE.blend;
+    } else if (sameEl) {
+      resultLabel = 'Refined ' + esc(a.name);
+      detail = 'Same species — a stronger version of the same line.';
+      charge = G.HATCH_CHARGE.refined;
+    } else {
+      resultLabel = `Usually a ${esc(a.name)} or ${esc(b.name)}`;
+      detail = `<strong style="color:var(--gold)">${Math.round(G.HYBRID_SUCCESS_CHANCE * 100)}% chance</strong> ` +
+        `the elements fuse into ${esc(prof.name)} (${esc(hyb)}) instead — ` +
+        `<em>${esc(prof.look)}</em>. Cross-element eggs are slow: ` +
+        `${G.HATCH_CHARGE.hybrid} Charge if it fuses.`;
+      charge = G.HATCH_CHARGE.throwback;
+    }
+
     return `<div class="card">
-    <div class="stat"><span>Result</span><span>${prof
-      ? esc(prof.name) + ' (' + esc(hyb) + ')' : 'Refined ' + esc(a.name)}</span></div>
-    ${prof ? `<div class="note" style="margin:8px 0 10px">
-      <em>${esc(prof.look)}</em><br>${esc(prof.personality)}</div>` : ''}
-    <div class="stat"><span>Charge</span><span>${S.charge} / ${cost}</span></div>
+    <div class="stat"><span>Result</span><span>${resultLabel}</span></div>
+    <div class="note" style="margin:8px 0 10px">${detail}</div>
+    <div class="stat"><span>Charge to hatch</span><span>${charge}</span></div>
     <div class="stat"><span>Rift Catalyst</span><span>${S.catalysts} available</span></div>
     <button class="primary" style="margin-top:12px" data-act="breed" ${canBreed ? '' : 'disabled'}>
-      ${canBreed ? 'Begin resonance' : S.charge < cost ? 'Not enough Charge — battle more' : 'No Catalyst'}</button>
-    <div class="note">Charge is earned by battling, not by waiting on a timer.</div>
+      ${canBreed ? 'Begin resonance'
+        : full ? 'Chamber full — hatch an egg first' : 'No Catalyst'}</button>
+    <div class="note">Eggs draw Charge from battling, not from waiting.</div>
   </div>`;
   })() : ''}
   <button data-act="view" data-v="home">Back</button>`;
@@ -1374,7 +1562,7 @@ app.addEventListener('click', (ev) => {
     S.team = [];
     S.crystals = { spark: 2, tide: 2, ember: 2, verdant: 2, terra: 2, gale: 2 };
     S.catalysts = 3; S.charge = 0;
-    S.dex = new Set(); S.banked = {}; S.battle = null; S.breedPick = [];
+    S.dex = new Set(); S.banked = {}; S.battle = null; S.breedPick = []; S.eggs = [];
     S.view = 'start';
     render();
     return;
@@ -1433,6 +1621,8 @@ app.addEventListener('click', (ev) => {
 
   else if (act === 'breed') doBreed();
 
+  else if (act === 'hatch') { doHatch(+btn.dataset.i); return; }
+
   else if (act === 'promote') {
     const uid = +btn.dataset.uid;
     const i = S.team.findIndex((m) => m.uid === uid);
@@ -1469,6 +1659,7 @@ function afterTurn() {
   if (b.outcome === 'wild_fainted') {
     const gain = 8 + Math.floor(rng() * 8);
     S.charge += gain;
+    feedEggs(gain);
     b.team.forEach((m) => { if (m.hp > 0) m.bond = Math.min(100, m.bond + 2); });
     const e = b.wild.elements[0];
     S.crystals[e] += 1;
@@ -1487,21 +1678,50 @@ function afterTurn() {
   }
 }
 
+const MAX_EGGS = 4;
+// 18 base creatures + 18 same-element blends + 15 rare cross-element hybrids.
+const DEX_TOTAL = G.SPECIES.length + Object.keys(G.BLENDS).length +
+  Object.keys(G.HYBRID_PROFILES).length;
+
 function doBreed() {
   const [a, b] = S.breedPick.map((uid) => S.team.find((m) => m.uid === uid));
   const res = G.breed(a, b, rng);
   if (res.error) { alert(res.error); return; }
+  if (S.eggs.length >= MAX_EGGS) { alert('The chamber is full — hatch an egg first.'); return; }
+
   S.catalysts -= 1;
-  S.charge -= 60;
   S.breedPick = [];
-  addMonster(res.child);
-  show(
-    res.rareBloom ? 'A Rare Bloom!' : res.kind === 'hybrid' ? 'A new hybrid' : 'A refined pairing',
-    res.rareBloom ? 'Alternate palette and +10% to every stat.'
-      : res.kind === 'hybrid' ? `${a.name} and ${b.name} produced a ${res.hybridElement}-element Infinimon.`
-      : `A stronger ${a.name} line.`,
-    res.child, true
-  );
+  S.eggs.push(res.egg);
+
+  // The egg keeps its result hidden until it hatches. Charge comes from
+  // battling, so the reveal is earned rather than waited out.
+  show('An egg!',
+    `${a.name} and ${b.name} produced an egg. It needs ${res.egg.chargeNeeded} Charge ` +
+    `to hatch — battle to build it up.`, null, true);
+}
+
+function doHatch(index) {
+  const egg = S.eggs[index];
+  if (!egg || !G.eggReady(egg)) return;
+  S.eggs.splice(index, 1);
+  addMonster(egg.child);
+
+  const title = egg.rareBloom ? 'A Rare Bloom hatched!'
+    : egg.kind === 'hybrid' ? 'The elements fused!'
+    : egg.kind === 'blend' ? 'A new blend hatched'
+    : 'The egg hatched';
+  const body = egg.rareBloom ? 'Alternate palette and +10% to every stat.'
+    : egg.kind === 'hybrid' ? `Against the odds, ${egg.parents.join(' and ')} produced a ` +
+        `${egg.hybridElement}-element Infinimon. These are rare.`
+    : egg.kind === 'blend' ? `${egg.parents.join(' and ')} combined into something new.`
+    : `The resonance didn't hold — the egg carried a parent's line through instead.`;
+
+  show(title, body, egg.child, true);
+}
+
+/** Every egg in the chamber gains Charge from a battle. */
+function feedEggs(amount) {
+  S.eggs.forEach((e) => G.feedEgg(e, amount));
 }
 
 // ---------------------------------------------------------------------------
@@ -1582,6 +1802,7 @@ function doTap() {
     addMonster(wild);
     const gain = 8 + Math.floor(rng() * 8);
     S.charge += gain;
+    feedEggs(gain);
     const lv = awardXp(S.battle.team, wild.level);
     S.battle = null;
     show(`${wild.name} joined you!`,
@@ -1598,6 +1819,7 @@ function doTap() {
     if (bolts) {
       const gain = 4 + Math.floor(rng() * 5);
       S.charge += gain;
+      feedEggs(gain);
       S.battle = null;
       healParty(G.CONFIG.POST_BATTLE_HEAL);
       show(`${wild.name} bolted`,

@@ -28,8 +28,8 @@ const G = require('./engine.js');
  */
 G.configure({ INCOMING_DAMAGE_MULT: 1, WILD_AI_ACCURACY: 1 });
 
-const ITERATIONS = 30;
-const RUNS = 20;      // per pairing, per iteration
+const ITERATIONS = 24;
+const RUNS = 14;      // per pairing, per iteration
 const LEVEL = 15;
 const RATE = 0.12;    // descent strength — 0.55 oscillated wildly, overshooting
 const MIN_STAT = 15;

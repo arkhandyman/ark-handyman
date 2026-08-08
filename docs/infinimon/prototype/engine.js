@@ -280,20 +280,79 @@
    * spread. Totals now range 170-191 — fast, frail monsters need a slightly
    * larger budget because SPD buys less than HP and DEF do.
    */
+  /*
+   * Three creatures per element, each with a distinct body ARCHETYPE.
+   *
+   * The archetype is what makes blending mean something: a fire fox bred with a
+   * fire lizard produces a fire creature carrying the fox's head and markings on
+   * the lizard's frame. Element decides the palette; the two archetypes decide
+   * the silhouette. Without this field, "they combine" has nothing to combine.
+   *
+   * Stat lines are solved by autobalance.js, never hand-assigned — see §7.
+   */
   const SPECIES = [
-    { id: 'voltmoth', name: 'Voltmoth', element: 'spark',   hp: 36, atk: 56, def: 25, spd: 65, rarity: 'common',   look: 'Pale moth, lightning veins in its wings' },
-    { id: 'bolthorn', name: 'Bolthorn', element: 'spark',   hp: 53, atk: 48, def: 43, spd: 30, rarity: 'uncommon', look: 'Stocky ram, charge arcing between horns' },
-    { id: 'puddlup',  name: 'Puddlup',  element: 'tide',    hp: 60, atk: 35, def: 55, spd: 30, rarity: 'common',   look: 'Round puddle-creature, oversized eyes' },
-    { id: 'finwhisk', name: 'Finwhisk', element: 'tide',    hp: 41, atk: 51, def: 30, spd: 60, rarity: 'common',   look: 'Darting fish-otter with whisker fins' },
-    { id: 'wickle',   name: 'Wickle',   element: 'ember',   hp: 36, atk: 61, def: 25, spd: 60, rarity: 'common',   look: 'Fox kit with a candle-flame tail' },
-    { id: 'coalpaw',  name: 'Coalpaw',  element: 'ember',   hp: 52, atk: 56, def: 42, spd: 20, rarity: 'rare',     look: 'Heavy badger, glowing cracks in its hide' },
-    { id: 'sproutle', name: 'Sproutle', element: 'verdant', hp: 55, atk: 40, def: 55, spd: 30, rarity: 'common',   look: 'Sapling creature with leaf-bud ears' },
-    { id: 'thornip',  name: 'Thornip',  element: 'verdant', hp: 39, atk: 59, def: 30, spd: 50, rarity: 'common',   look: 'Bristly root-rodent, thorn ridge' },
-    { id: 'pebbet',   name: 'Pebbet',   element: 'terra',   hp: 60, atk: 40, def: 65, spd: 15, rarity: 'uncommon', look: 'Small stone tortoise, moss on the shell' },
-    { id: 'burrowl',  name: 'Burrowl',  element: 'terra',   hp: 44, atk: 49, def: 39, spd: 45, rarity: 'uncommon', look: 'Owl with earth feathers and digging talons' },
-    { id: 'kitewing', name: 'Kitewing', element: 'gale',    hp: 33, atk: 50, def: 33, spd: 75, rarity: 'rare',     look: 'Paper-thin gliding manta, translucent' },
-    { id: 'ruffle',   name: 'Ruffle',   element: 'gale',    hp: 48, atk: 48, def: 39, spd: 40, rarity: 'common',   look: 'Puffed-up bird, permanently windswept' },
+    // Spark — moth, ram, serpent
+    { id: 'voltmoth', name: 'Voltmoth', element: 'spark',   archetype: 'moth',     hp: 36, atk: 56, def: 25, spd: 65, rarity: 'common',   look: 'Pale moth, lightning veins in its wings' },
+    { id: 'bolthorn', name: 'Bolthorn', element: 'spark',   archetype: 'ram',      hp: 54, atk: 49, def: 43, spd: 30, rarity: 'uncommon', look: 'Stocky ram, charge arcing between horns' },
+    { id: 'snapcoil', name: 'Snapcoil', element: 'spark',   archetype: 'serpent',  hp: 39, atk: 54, def: 29, spd: 55, rarity: 'common',   look: 'Ribbon-thin serpent that snaps like a live wire' },
+    // Tide — blob, otter, crab
+    { id: 'puddlup',  name: 'Puddlup',  element: 'tide',    archetype: 'blob',     hp: 61, atk: 35, def: 56, spd: 30, rarity: 'common',   look: 'Round puddle-creature, oversized eyes' },
+    { id: 'finwhisk', name: 'Finwhisk', element: 'tide',    archetype: 'otter',    hp: 40, atk: 50, def: 30, spd: 60, rarity: 'common',   look: 'Darting fish-otter with whisker fins' },
+    { id: 'brineclaw',name: 'Brineclaw',element: 'tide',    archetype: 'crab',     hp: 50, atk: 45, def: 59, spd: 25, rarity: 'uncommon', look: 'Barnacled crab with one oversized claw' },
+    // Ember — fox, badger, lizard
+    { id: 'wickle',   name: 'Wickle',   element: 'ember',   archetype: 'fox',      hp: 36, atk: 60, def: 25, spd: 60, rarity: 'common',   look: 'Fox kit with a candle-flame tail' },
+    { id: 'coalpaw',  name: 'Coalpaw',  element: 'ember',   archetype: 'badger',   hp: 52, atk: 56, def: 42, spd: 20, rarity: 'rare',     look: 'Heavy badger, glowing cracks in its hide' },
+    { id: 'scorchtail',name:'Scorchtail',element:'ember',   archetype: 'lizard',   hp: 44, atk: 54, def: 39, spd: 40, rarity: 'common',   look: 'Sun-basking lizard whose tail burns like a wick' },
+    // Verdant — sapling, rodent, deer
+    { id: 'sproutle', name: 'Sproutle', element: 'verdant', archetype: 'sapling',  hp: 56, atk: 41, def: 56, spd: 30, rarity: 'common',   look: 'Sapling creature with leaf-bud ears' },
+    { id: 'thornip',  name: 'Thornip',  element: 'verdant', archetype: 'rodent',   hp: 39, atk: 60, def: 30, spd: 50, rarity: 'common',   look: 'Bristly root-rodent, thorn ridge' },
+    { id: 'fernfawn', name: 'Fernfawn', element: 'verdant', archetype: 'deer',     hp: 45, atk: 45, def: 35, spd: 55, rarity: 'uncommon', look: 'Slender fawn with fern fronds for a tail' },
+    // Terra — tortoise, owl, beetle
+    { id: 'pebbet',   name: 'Pebbet',   element: 'terra',   archetype: 'tortoise', hp: 61, atk: 41, def: 66, spd: 15, rarity: 'uncommon', look: 'Small stone tortoise, moss on the shell' },
+    { id: 'burrowl',  name: 'Burrowl',  element: 'terra',   archetype: 'owl',      hp: 45, atk: 50, def: 40, spd: 45, rarity: 'uncommon', look: 'Owl with earth feathers and digging talons' },
+    { id: 'shalebug', name: 'Shalebug', element: 'terra',   archetype: 'beetle',   hp: 50, atk: 45, def: 55, spd: 30, rarity: 'common',   look: 'Beetle plated in flat shale, dusty underneath' },
+    // Gale — manta, bird, weasel
+    { id: 'kitewing', name: 'Kitewing', element: 'gale',    archetype: 'manta',    hp: 33, atk: 50, def: 33, spd: 75, rarity: 'rare',     look: 'Paper-thin gliding manta, translucent' },
+    { id: 'ruffle',   name: 'Ruffle',   element: 'gale',    archetype: 'bird',     hp: 48, atk: 48, def: 39, spd: 40, rarity: 'common',   look: 'Puffed-up bird, permanently windswept' },
+    { id: 'breezel',  name: 'Breezel',  element: 'gale',    archetype: 'weasel',   hp: 40, atk: 50, def: 35, spd: 55, rarity: 'common',   look: 'Long weasel that runs just ahead of the wind' },
   ];
+
+  /*
+   * Same-element blends — the everyday breeding result (§6).
+   *
+   * One per pair of archetypes within an element: 3 pairs x 6 elements = 18.
+   * Keyed by the two parent species ids, sorted, so a pairing is deterministic
+   * in either order. Names are placeholders; see naming.md.
+   */
+  const BLENDS = {
+    // Spark
+    'bolthorn|voltmoth':  { name: 'Voltram',      look: 'Ram\'s curled horns on a moth\'s furred, winged body' },
+    'snapcoil|voltmoth':  { name: 'Coilmoth',     look: 'Serpentine body trailing four ragged moth wings' },
+    'bolthorn|snapcoil':  { name: 'Hornsnap',     look: 'Horned serpent that rears and butts like a ram' },
+    // Tide
+    'finwhisk|puddlup':   { name: 'Whiskpool',    look: 'Otter shape that keeps half-melting back into water' },
+    'brineclaw|puddlup':  { name: 'Poolclaw',     look: 'Soft puddle body with one heavy barnacled claw' },
+    'brineclaw|finwhisk': { name: 'Clawfin',      look: 'Sleek otter with crab plating along its back' },
+    // Ember
+    'scorchtail|wickle':  { name: 'Scorchkit',    look: 'Fox\'s ears and brush tail on a lean lizard frame' },
+    'coalpaw|wickle':     { name: 'Coalkit',      look: 'Fox-faced, badger-built, cracks glowing at the joints' },
+    'coalpaw|scorchtail': { name: 'Cindermaw',    look: 'Broad badger jaw on a low, scaled, ember-lit body' },
+    // Verdant
+    'sproutle|thornip':   { name: 'Thornsprout',  look: 'Rodent curled inside a sapling\'s split trunk' },
+    'fernfawn|sproutle':  { name: 'Leaffawn',     look: 'Fawn with a sapling\'s bud-crown and bark-flecked legs' },
+    'fernfawn|thornip':   { name: 'Bramblefawn',  look: 'Fawn wearing a bristling thorn mantle' },
+    // Terra
+    'burrowl|pebbet':     { name: 'Shellowl',     look: 'Owl hunched under a mossy tortoise shell' },
+    'pebbet|shalebug':    { name: 'Cragshell',    look: 'Tortoise shell layered in overlapping shale plates' },
+    'burrowl|shalebug':   { name: 'Beetlebeak',   look: 'Beetle carapace split by a hooked owl\'s beak' },
+    // Gale
+    'kitewing|ruffle':    { name: 'Kiteplume',    look: 'Translucent glider edged in soft feather down' },
+    'breezel|kitewing':   { name: 'Glidetail',    look: 'Long weasel with a manta\'s membrane between its limbs' },
+    'breezel|ruffle':     { name: 'Windruff',     look: 'Feather-ruffed weasel, permanently mid-gust' },
+  };
+
+  const blendKey = (idA, idB) => [idA, idB].sort().join('|');
+  const blendFor = (idA, idB) => BLENDS[blendKey(idA, idB)] || null;
 
   const speciesById = (id) => SPECIES.find((s) => s.id === id);
 
@@ -784,77 +843,142 @@
   // Breeding should be worth doing. Offspring target this multiple of the
   // parents' average power.
   const HYBRID_POWER_BONUS = 1.10;
+  const BLEND_POWER_BONUS = 1.09;
   const REFINED_POWER_BONUS = 1.06;
 
+  /*
+   * Charge needed to hatch, by outcome. This is what makes "some hatch earlier
+   * than others" true: a blend is quick, a cross-element hybrid takes roughly
+   * three times as long. Rarity and patience reinforce each other.
+   */
+  const HATCH_CHARGE = {
+    refined: 40,    // same species paired with itself
+    blend: 65,      // same element, different archetypes — the everyday result
+    throwback: 65,  // cross-element that failed to fuse
+    hybrid: 190,    // the rare one
+  };
+
+  // Chance a cross-element pairing actually fuses. Cross-element hybrids are
+  // meant to be a discovery, not a menu selection.
+  const HYBRID_SUCCESS_CHANCE = 0.10;
+
+  /**
+   * Breed two creatures. Returns an EGG — the result is decided now but stays
+   * hidden until the egg hatches (§6).
+   *
+   *   same species          -> refined line
+   *   same element, differing archetypes -> BLEND (the everyday case)
+   *   different elements    -> 10% true hybrid, otherwise a throwback to one
+   *                            parent's species
+   */
   function breed(a, b, rng) {
     const elsA = a.elements;
     const elsB = b.elements;
 
-    // v1 does not support hybrid x hybrid (§6).
     if (elsA.length > 1 || elsB.length > 1) {
-      return { error: 'Hybrid pairs are a v2 feature — breed two base monsters.' };
+      return { error: 'Bred creatures can\'t breed again yet — pair two you caught.' };
+    }
+    if (a.uid === b.uid) {
+      return { error: 'A creature can\'t pair with itself.' };
     }
 
     const sameElement = elsA[0] === elsB[0];
-    const elements = sameElement ? [elsA[0]] : orderElements(elsA[0], elsB[0]);
 
     // Inherited line: average the parents, with a chance at the better value.
-    // This is what makes two Steams from different parents differ.
+    // This is what makes two Scorchkits from different parents differ.
     const inherited = {};
     for (const key of STAT_KEYS) {
       const av = a.bases[key];
       const bv = b.bases[key];
-      let value = rng() < 0.25 ? Math.max(av, bv) : (av + bv) / 2;
+      const value = rng() < 0.25 ? Math.max(av, bv) : (av + bv) / 2;
       inherited[key] = value * range(rng, 0.94, 1.06);
     }
 
     const parentPower = (powerOf(a.bases) + powerOf(b.bases)) / 2;
     const rareBloom = rng() < RARE_BLOOM_CHANCE;
 
-    let bases, name, speciesId = null, profile = null;
-    const hybrid = sameElement ? null : hybridName(elements[0], elements[1]);
+    let kind, elements, bases, name, look = null, personality = null;
+    let speciesId = null, profile = null, hybrid = null;
 
     if (sameElement) {
-      // Same-element pairing refines the line rather than reshaping it: no
-      // bias, just a modest power lift over the parents.
-      bases = fitToPower(inherited, { hp: 1, atk: 1, def: 1, spd: 1 },
-        parentPower * REFINED_POWER_BONUS);
-      const parent = rng() < 0.5 ? a : b;
-      name = parent.name;
-      speciesId = parent.speciesId;
-    } else {
+      elements = [elsA[0]];
+      const blend = a.speciesId && b.speciesId ? blendFor(a.speciesId, b.speciesId) : null;
+
+      if (blend) {
+        // The everyday case: two archetypes of one element combine.
+        kind = 'blend';
+        name = blend.name;
+        look = blend.look;
+        bases = fitToPower(inherited, { hp: 1, atk: 1, def: 1, spd: 1 },
+          parentPower * BLEND_POWER_BONUS);
+      } else {
+        // Same species paired together — refine the line instead.
+        kind = 'refined';
+        const parent = rng() < 0.5 ? a : b;
+        name = parent.name;
+        speciesId = parent.speciesId;
+        bases = fitToPower(inherited, { hp: 1, atk: 1, def: 1, spd: 1 },
+          parentPower * REFINED_POWER_BONUS);
+      }
+    } else if (rng() < HYBRID_SUCCESS_CHANCE) {
+      // The rare one — two elements genuinely fuse.
+      kind = 'hybrid';
+      elements = orderElements(elsA[0], elsB[0]);
+      hybrid = hybridName(elements[0], elements[1]);
       profile = HYBRID_PROFILES[hybrid];
-      // powerMult compensates for shape extremity. Equal power does NOT mean
-      // equal strength — the same lesson the 180-point stat budget taught in §7,
-      // so these are solved empirically by `node hybrids.js solve`.
+      name = profile.name;
+      look = profile.look;
+      personality = profile.personality;
+      // powerMult compensates for shape extremity — equal power is NOT equal
+      // strength. Solved empirically by `node hybrids.js solve`.
       bases = fitToPower(inherited, profile.bias,
         parentPower * HYBRID_POWER_BONUS * (profile.powerMult || 1));
-      name = profile.name;
+    } else {
+      // The resonance didn't hold. The egg carries one parent's line through.
+      kind = 'throwback';
+      const parent = rng() < 0.5 ? a : b;
+      elements = [parent.elements[0]];
+      name = parent.name;
+      speciesId = parent.speciesId;
+      bases = fitToPower(inherited, { hp: 1, atk: 1, def: 1, spd: 1 },
+        parentPower * REFINED_POWER_BONUS);
     }
 
     const child = createMonster({
-      speciesId,
-      elements,
-      bases,
-      name,
+      speciesId, elements, bases, name,
       level: 5,
-      bond: 50,       // bred monsters start bonded (§7)
+      bond: 50,       // bred creatures start bonded (§7)
       rareBloom,
       bred: true,
     });
-    if (profile) {
-      child.personality = profile.personality;
-      child.look = profile.look;
-    }
+    if (look) child.look = look;
+    if (personality) child.personality = personality;
 
     return {
-      child,
+      egg: {
+        kind,
+        child,
+        rareBloom,
+        hybridElement: hybrid,
+        element: elements[0],
+        charge: 0,
+        chargeNeeded: HATCH_CHARGE[kind],
+        parents: [a.name, b.name],
+      },
+      kind,
       rareBloom,
-      kind: sameElement ? 'refined' : 'hybrid',
       hybridElement: hybrid,
       profile,
     };
   }
+
+  /** Add Charge to an egg. Returns true once it is ready to hatch. */
+  function feedEgg(egg, amount) {
+    egg.charge = Math.min(egg.chargeNeeded, egg.charge + amount);
+    return egg.charge >= egg.chargeNeeded;
+  }
+
+  const eggReady = (egg) => egg.charge >= egg.chargeNeeded;
 
   // ---------------------------------------------------------------------------
   // Encounters
@@ -878,6 +1002,7 @@
     RARE_BLOOM_CHANCE, STATUSES,
     // data
     ELEMENT_CYCLE, ELEMENTS, SPECIES, HYBRID_NAMES, HYBRID_PROFILES,
+    BLENDS, blendKey, blendFor, HATCH_CHARGE, HYBRID_SUCCESS_CHANCE,
     // helpers
     makeRng, speciesById, typeMultiplier, defenseMultiplier, oppositeElement,
     hybridName, hybridKey, orderElements, statAt, movesFor, powerOf, fitToPower,
@@ -885,7 +1010,7 @@
     createMonster, damage, expectedDamage, chooseMove, chooseWildMove, effectiveSpd,
     createBattle, resolveTurn, activeMonster, affordable,
     canAttune, attune, attuneZoneWidth, attuneSpeed, fleeChanceAfterFailure, ATTUNE,
-    breed, randomWild,
+    breed, feedEgg, eggReady, randomWild,
     // progression
     xpToNext, grantXp, xpForWin, recomputeStats,
   };

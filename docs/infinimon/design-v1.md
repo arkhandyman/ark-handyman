@@ -370,24 +370,40 @@ All three monsters fainted → you're recalled to the Lab, lose half your carrie
 
 ### Compatibility
 
-| Pairing | Result |
+Every creature has an **element** and a **body archetype** — fox, lizard, crab, beetle, and so on. The archetype is what makes blending mean anything: without it, "they combine" has nothing to combine.
+
+| Pairing | Result | Frequency |
+|---|---|---|
+| **Same element, different archetypes** | **Blend** — a new species carrying features of both parents | Always. This is the everyday case |
+| Same species with itself | **Refined** line — stronger, same creature | Always |
+| **Different elements** | **Rare hybrid** — the dual-element species (§2) | **10%**. Otherwise a throwback to one parent's line |
+
+**Same-element blending is the core mechanic.** A fire fox bred with a fire lizard reliably produces a fire creature with the fox's ears and brush tail on a lizard's frame. It needs no explanation to a child, and it gives the art pipeline a clean rule: **head and markings from one parent, body and stance from the other, shared element palette.**
+
+Three creatures per element × 3 pairings each = **18 blends**.
+
+**Cross-element hybrids are the rare find.** You can attempt one any time, but only about 1 in 10 pairings actually fuses; the rest produce a throwback to one parent's species. Hybrids also need roughly **three times the Charge** to hatch. Rarity and patience reinforce each other, so a Kettlepup feels earned rather than selected from a menu.
+
+### Eggs
+
+Breeding produces an **egg**, not a creature. The result is decided at pairing time but stays hidden until it hatches.
+
+An egg needs **Charge** to hatch, and Charge is earned by **battling** — never by a real-time timer. Every egg in the chamber draws from each battle you fight, so keeping several going is rewarded rather than punished.
+
+| Outcome | Charge to hatch |
 |---|---|
-| Two different base elements | **Hybrid** — the dual-element species for that pair (§2) |
-| Two of the same element | **Refined base** — same species as a parent, but rolls stats from the better half of the range |
-| Any pair involving a hybrid | **Not available in v1** — see below |
+| Refined line | 40 |
+| **Blend** | 65 |
+| Throwback (failed fusion) | 65 |
+| **Rare hybrid** | 190 |
 
-Same-element pairing isn't a wasted slot: it's how you improve a monster you already like. Different-element pairing is how you discover.
-
-### Cost and time
+This is what makes *some eggs hatch long before others*: a blend arrives quickly, a hybrid takes roughly three times as long. The chamber holds **4 eggs** at once.
 
 | Requirement | Amount |
 |---|---|
-| **Rift Catalyst** | 1 per breed — consumed |
-| **Charge** | 50–100 depending on parent rarity |
+| **Rift Catalyst** | 1 per pairing — consumed |
 
-**Charge is earned by battling** (roughly 8–15 per wild win). An egg does not tick down on a real-time clock — it fills as you play. This is a deliberate rejection of the free-to-play wait-timer pattern.
-
-**Rift Catalysts** are the pacing lever: they're story and quest rewards early, so breeding unlocks gradually and can't be farmed on day one.
+**Rift Catalysts** are the pacing lever: story and quest rewards early, so breeding unlocks gradually and can't be farmed on day one. Charge is no longer spent to *start* a pairing — it's what the egg feeds on.
 
 ### What the offspring inherits
 
@@ -443,7 +459,7 @@ This is the entire chase mechanic for v1. It gives collectible rarity without ne
 
 ### Deliberately deferred to v2
 
-- **Breeding two hybrids.** This is the obvious expansion and the reason the dex can grow from 27 to hundreds later. Leaving it out of v1 keeps the species count hand-drawable and the balance tractable. The data model should not preclude it.
+- **Breeding two bred creatures.** Blends and hybrids can't currently pair. This is the obvious expansion and the reason the dex can grow later. The data model does not preclude it.
 - **Globally capped species.** Requires server-authoritative state. The design is compatible with adding it; v1 simply doesn't need it.
 - **Recessive/hidden genes.** Fun, but invisible depth is wasted when there are only 15 hybrids to find.
 
