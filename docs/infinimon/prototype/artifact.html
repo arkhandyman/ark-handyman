@@ -98,6 +98,53 @@
   .sel { outline: 2px solid var(--accent); }
   .res { display: flex; gap: 10px; font-size: 11.5px; color: var(--dim); flex-wrap: wrap; }
   .res b { color: var(--gold); }
+
+  /* ---- battle arena: the two creatures face each other, Pokemon-style ---- */
+  .arena { position: relative; height: 250px; border-radius: 14px; overflow: hidden;
+           border: 1px solid var(--line); margin-bottom: 12px;
+           background:
+             radial-gradient(120% 70% at 78% 22%, rgba(127,212,255,.10), transparent 60%),
+             linear-gradient(#1b2542 0%, #131c33 52%, #0f1626 100%); }
+  .slot { position: absolute; display: grid; place-items: center; }
+  .slot.foe    { right: 9%;  top: 16%; }
+  .slot.mine   { left: 9%;   bottom: 12%; }
+  .ground { position: absolute; bottom: -8px; width: 108%; height: 22px; border-radius: 50%;
+            background: rgba(0,0,0,.34); filter: blur(3px); }
+  .sprite { position: relative; border-radius: 42% 58% 55% 45% / 52% 45% 55% 48%;
+            display: grid; place-items: center; font-weight: 800; color: #0d1017;
+            box-shadow: inset 0 -8px 18px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.35); }
+  .slot.foe  .sprite { width: 82px;  height: 82px;  font-size: 28px; }
+  .slot.mine .sprite { width: 108px; height: 108px; font-size: 36px; }
+
+  .infobox { position: absolute; background: rgba(16,21,32,.92); border: 1px solid var(--line);
+             border-radius: 10px; padding: 7px 11px; min-width: 156px; backdrop-filter: blur(3px); }
+  .infobox.foe  { left: 10px;  top: 12px; }
+  .infobox.mine { right: 10px; bottom: 12px; }
+  .infobox .row1 { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .infobox .nm2 { font-weight: 700; font-size: 13px; }
+  .infobox .lv { font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .infobox .hpnum { font-size: 10.5px; color: var(--dim); text-align: right;
+                    font-variant-numeric: tabular-nums; margin-top: 2px; }
+
+  /* attack lunge, hit shake, floating numbers */
+  @keyframes lungeMine { 0%,100% { transform: none } 45% { transform: translate(26px,-20px) } }
+  @keyframes lungeFoe  { 0%,100% { transform: none } 45% { transform: translate(-26px,20px) } }
+  @keyframes shake { 0%,100% { transform: none } 20% { transform: translateX(-7px) }
+                     50% { transform: translateX(7px) } 80% { transform: translateX(-4px) } }
+  @keyframes flash { 0%,100% { filter: none } 40% { filter: brightness(2.4) saturate(.4) } }
+  .sprite.lunge-mine { animation: lungeMine .42s ease; }
+  .sprite.lunge-foe  { animation: lungeFoe .42s ease; }
+  .sprite.hit { animation: shake .38s ease, flash .38s ease; }
+  .sprite.faint { opacity: .18; transform: translateY(14px) scale(.86); transition: .5s ease; }
+
+  @keyframes floatUp { 0% { opacity: 0; transform: translateY(6px) }
+                       18% { opacity: 1 } 100% { opacity: 0; transform: translateY(-42px) } }
+  .float { position: absolute; font-weight: 800; font-size: 19px; pointer-events: none;
+           animation: floatUp 1.05s ease forwards; text-shadow: 0 2px 6px rgba(0,0,0,.7);
+           font-variant-numeric: tabular-nums; }
+  .float.dmg { color: #ff8f6b; }
+  .float.heal { color: var(--good); }
+  .float.glance { color: var(--dim); font-size: 15px; }
 </style>
 <div id="app"></div>
 
@@ -758,6 +805,7 @@
       wildFocus: CONFIG.FOCUS_START,
       turn: 1,
       log: [],
+      fx: [],          // visual events from the last turn, for the UI to animate
       over: false,
       outcome: null,
       // Highest HP fraction the wild monster has been seen below — drives the
@@ -859,6 +907,12 @@
     if (glanced) amount = Math.max(1, Math.round(amount * CONFIG.GLANCE_DAMAGE));
 
     defender.hp = Math.max(0, defender.hp - amount);
+    b.fx.push({
+      kind: 'hit',
+      target: defender === b.wild ? 'wild' : 'player',
+      attacker: attacker === b.wild ? 'wild' : 'player',
+      amount, glanced, multiplier,
+    });
     const tag = glanced ? ` ${defender.name} slips most of it!`
       : multiplier > 1.05 ? ' It hits hard!'
       : multiplier < 0.95 ? " It's not very effective." : '';
@@ -883,12 +937,14 @@
       case 'heal': {
         const healed = Math.round(attacker.maxHp * move.amount);
         attacker.hp = Math.min(attacker.maxHp, attacker.hp + healed);
+        b.fx.push({ kind: 'heal', target: attacker === b.wild ? 'wild' : 'player', amount: healed });
         b.log.push(`${attacker.name} recovers ${healed} HP.`);
         break;
       }
       case 'drain': {
         const drained = Math.max(1, Math.round(amount * move.amount));
         attacker.hp = Math.min(attacker.maxHp, attacker.hp + drained);
+        b.fx.push({ kind: 'heal', target: attacker === b.wild ? 'wild' : 'player', amount: drained });
         b.log.push(`${attacker.name} drains ${drained} HP.`);
         break;
       }
@@ -908,6 +964,7 @@
    */
   function resolveTurn(b, playerMove) {
     if (b.over) return b;
+    b.fx = [];
     const player = activeMonster(b);
     const wild = b.wild;
 
@@ -1137,6 +1194,11 @@
   // meant to be a discovery, not a menu selection.
   const HYBRID_SUCCESS_CHANCE = 0.25;
 
+  // Chance a same-element pairing produces the blend rather than carrying one
+  // parent's line through. The parent copy is not a consolation prize — it is
+  // bred from both parents' stats and comes out stronger than either (§6).
+  const BLEND_SUCCESS_CHANCE = 0.70;
+
   /**
    * Breed two creatures. Returns an EGG — the result is decided now but stays
    * hidden until the egg hatches (§6).
@@ -1184,7 +1246,7 @@
       elements = [elsA[0]];
       const blend = a.speciesId && b.speciesId ? blendFor(a.speciesId, b.speciesId) : null;
 
-      if (blend) {
+      if (blend && rng() < BLEND_SUCCESS_CHANCE) {
         // The everyday case: two archetypes of one element combine.
         kind = 'blend';
         name = blend.name;
@@ -1192,11 +1254,13 @@
         bases = fitToPower(inherited, { hp: 1, atk: 1, def: 1, spd: 1 },
           parentPower * BLEND_POWER_BONUS);
       } else {
-        // Same species paired together — refine the line instead.
+        // Either the same species paired together, or a blend that didn't take.
+        // Either way the egg carries one parent's line through, improved.
         kind = 'refined';
         const parent = rng() < 0.5 ? a : b;
         name = parent.name;
         speciesId = parent.speciesId;
+        archetype = parent.archetype || archetype;
         bases = fitToPower(inherited, { hp: 1, atk: 1, def: 1, spd: 1 },
           parentPower * REFINED_POWER_BONUS);
       }
@@ -1375,7 +1439,8 @@
     RARE_BLOOM_CHANCE, STATUSES,
     // data
     ELEMENT_CYCLE, ELEMENTS, SPECIES, HYBRID_NAMES, HYBRID_PROFILES,
-    BLENDS, blendKey, blendFor, HATCH_CHARGE, HYBRID_SUCCESS_CHANCE,
+    BLENDS, blendKey, blendFor, HATCH_CHARGE,
+    HYBRID_SUCCESS_CHANCE, BLEND_SUCCESS_CHANCE,
     REGIONS, regionById, regionUnlocked,
     // helpers
     makeRng, speciesById, typeMultiplier, defenseMultiplier, oppositeElement,
@@ -1640,18 +1705,37 @@ VIEWS.battle = () => {
   const canTame = G.canAttune(w);
   const req = G.TRUST_REQUIRED[w.rarity];
 
-  return `<h1>Wild ${esc(w.name)}</h1>
-  <div class="sub">${esc(w.elementLabel)} &middot; ${w.rarity} &middot; needs ${req} Trust</div>
+  const infobox = (m, side) => {
+    const pct = (m.hp / m.maxHp) * 100;
+    const cls = pct > 50 ? '' : pct > 25 ? 'mid' : 'low';
+    return `<div class="infobox ${side}">
+      <div class="row1"><span class="nm2">${esc(m.name)}</span>
+        <span class="lv">Lv ${m.level}</span></div>
+      <div class="bar"><div class="hpfill ${cls}" style="width:${pct}%"></div></div>
+      <div class="hpnum">${m.hp} / ${m.maxHp}</div>
+      ${buffChips(m)}
+    </div>`;
+  };
 
-  <div class="card">
-    ${monRow(w)}${hpBar(w)}${buffChips(w)}
-    <div class="meta" style="margin-top:6px">${Math.round((w.hp / w.maxHp) * 100)}% HP
-      ${canTame ? '&middot; <span style="color:var(--good)">Attune available</span>'
-                : '&middot; weaken below 50% to attune'}</div>
+  return `<div class="arena" id="arena">
+    ${infobox(w, 'foe')}
+    ${infobox(p, 'mine')}
+    <div class="slot foe">
+      <div class="ground"></div>
+      <div class="sprite" id="sprite-wild" style="${blobStyle(w)}">${initial(w)}</div>
+    </div>
+    <div class="slot mine">
+      <div class="ground"></div>
+      <div class="sprite" id="sprite-player" style="${blobStyle(p)}">${initial(p)}</div>
+    </div>
   </div>
 
   <div class="card">
-    ${monRow(p)}${hpBar(p)}${buffChips(p)}${focusPips(b.playerFocus)}
+    <div class="meta">Wild ${esc(w.name)} &middot; ${esc(w.elementLabel)} &middot;
+      ${Math.round((w.hp / w.maxHp) * 100)}% HP
+      ${canTame ? '&middot; <span style="color:var(--good)">ready to attune</span>'
+                : '&middot; weaken below 50% to attune'}</div>
+    ${focusPips(b.playerFocus)}
   </div>
 
   <div class="card">
@@ -1680,7 +1764,7 @@ VIEWS.battle = () => {
     })()}
     <div class="row" style="margin-top:8px">
       <button data-act="attune" ${canTame ? '' : 'disabled'}
-        style="${canTame ? 'border-color:var(--good);color:var(--good)' : ''}">Attune</button>
+        style="${canTame ? 'border-color:var(--good);color:var(--good)' : ''}">Attune (needs ${req} Trust)</button>
       <button data-act="flee">Flee</button>
     </div>
   </div>
@@ -1861,7 +1945,70 @@ function render() {
   const log = document.getElementById('log');
   if (log) log.scrollTop = log.scrollHeight;
   if (S.view === 'attune') startNeedle();
+  if (S.view === 'battle') playBattleFx();
   if (S.team.length) saveGame();
+}
+
+/*
+ * Replay the last turn's events on the arena: the attacker lunges, the target
+ * shakes and flashes, and the number floats off it. Reads battle.fx, which the
+ * engine fills during resolveTurn.
+ */
+function playBattleFx() {
+  const b = S.battle;
+  const arena = document.getElementById('arena');
+  if (!b || !arena || !b.fx || !b.fx.length) return;
+
+  const spriteOf = (side) =>
+    document.getElementById(side === 'wild' ? 'sprite-wild' : 'sprite-player');
+
+  b.fx.forEach((e, idx) => {
+    const delay = idx * 260;
+
+    setTimeout(() => {
+      const target = spriteOf(e.target);
+      if (!target) return;
+
+      if (e.kind === 'hit') {
+        const atk = spriteOf(e.attacker);
+        if (atk) {
+          atk.classList.add(e.attacker === 'wild' ? 'lunge-foe' : 'lunge-mine');
+          setTimeout(() => atk.classList.remove('lunge-foe', 'lunge-mine'), 430);
+        }
+        setTimeout(() => {
+          target.classList.add('hit');
+          setTimeout(() => target.classList.remove('hit'), 400);
+          floatNumber(target, e.glanced ? 'glance' : 'dmg',
+            e.glanced ? 'glanced ' + e.amount : '-' + e.amount);
+        }, 170);
+      } else if (e.kind === 'heal') {
+        floatNumber(target, 'heal', '+' + e.amount);
+      }
+    }, delay);
+  });
+
+  // Fade out anything that fainted once the hits have played.
+  setTimeout(() => {
+    const w = spriteOf('wild');
+    const p = spriteOf('player');
+    if (w && b.wild && b.wild.hp <= 0) w.classList.add('faint');
+    const me = G.activeMonster(b);
+    if (p && me && me.hp <= 0) p.classList.add('faint');
+  }, b.fx.length * 260 + 220);
+}
+
+function floatNumber(anchor, cls, text) {
+  const arena = document.getElementById('arena');
+  if (!arena || !anchor) return;
+  const a = anchor.getBoundingClientRect();
+  const r = arena.getBoundingClientRect();
+  const n = document.createElement('div');
+  n.className = 'float ' + cls;
+  n.textContent = text;
+  n.style.left = (a.left - r.left + a.width / 2 - 18) + 'px';
+  n.style.top = (a.top - r.top - 6) + 'px';
+  arena.appendChild(n);
+  setTimeout(() => n.remove(), 1100);
 }
 
 function show(title, body, mon, good) {

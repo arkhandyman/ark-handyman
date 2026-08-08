@@ -654,6 +654,7 @@
       wildFocus: CONFIG.FOCUS_START,
       turn: 1,
       log: [],
+      fx: [],          // visual events from the last turn, for the UI to animate
       over: false,
       outcome: null,
       // Highest HP fraction the wild monster has been seen below — drives the
@@ -755,6 +756,12 @@
     if (glanced) amount = Math.max(1, Math.round(amount * CONFIG.GLANCE_DAMAGE));
 
     defender.hp = Math.max(0, defender.hp - amount);
+    b.fx.push({
+      kind: 'hit',
+      target: defender === b.wild ? 'wild' : 'player',
+      attacker: attacker === b.wild ? 'wild' : 'player',
+      amount, glanced, multiplier,
+    });
     const tag = glanced ? ` ${defender.name} slips most of it!`
       : multiplier > 1.05 ? ' It hits hard!'
       : multiplier < 0.95 ? " It's not very effective." : '';
@@ -779,12 +786,14 @@
       case 'heal': {
         const healed = Math.round(attacker.maxHp * move.amount);
         attacker.hp = Math.min(attacker.maxHp, attacker.hp + healed);
+        b.fx.push({ kind: 'heal', target: attacker === b.wild ? 'wild' : 'player', amount: healed });
         b.log.push(`${attacker.name} recovers ${healed} HP.`);
         break;
       }
       case 'drain': {
         const drained = Math.max(1, Math.round(amount * move.amount));
         attacker.hp = Math.min(attacker.maxHp, attacker.hp + drained);
+        b.fx.push({ kind: 'heal', target: attacker === b.wild ? 'wild' : 'player', amount: drained });
         b.log.push(`${attacker.name} drains ${drained} HP.`);
         break;
       }
@@ -804,6 +813,7 @@
    */
   function resolveTurn(b, playerMove) {
     if (b.over) return b;
+    b.fx = [];
     const player = activeMonster(b);
     const wild = b.wild;
 
@@ -1033,6 +1043,11 @@
   // meant to be a discovery, not a menu selection.
   const HYBRID_SUCCESS_CHANCE = 0.25;
 
+  // Chance a same-element pairing produces the blend rather than carrying one
+  // parent's line through. The parent copy is not a consolation prize — it is
+  // bred from both parents' stats and comes out stronger than either (§6).
+  const BLEND_SUCCESS_CHANCE = 0.70;
+
   /**
    * Breed two creatures. Returns an EGG — the result is decided now but stays
    * hidden until the egg hatches (§6).
@@ -1080,7 +1095,7 @@
       elements = [elsA[0]];
       const blend = a.speciesId && b.speciesId ? blendFor(a.speciesId, b.speciesId) : null;
 
-      if (blend) {
+      if (blend && rng() < BLEND_SUCCESS_CHANCE) {
         // The everyday case: two archetypes of one element combine.
         kind = 'blend';
         name = blend.name;
@@ -1088,11 +1103,13 @@
         bases = fitToPower(inherited, { hp: 1, atk: 1, def: 1, spd: 1 },
           parentPower * BLEND_POWER_BONUS);
       } else {
-        // Same species paired together — refine the line instead.
+        // Either the same species paired together, or a blend that didn't take.
+        // Either way the egg carries one parent's line through, improved.
         kind = 'refined';
         const parent = rng() < 0.5 ? a : b;
         name = parent.name;
         speciesId = parent.speciesId;
+        archetype = parent.archetype || archetype;
         bases = fitToPower(inherited, { hp: 1, atk: 1, def: 1, spd: 1 },
           parentPower * REFINED_POWER_BONUS);
       }
@@ -1271,7 +1288,8 @@
     RARE_BLOOM_CHANCE, STATUSES,
     // data
     ELEMENT_CYCLE, ELEMENTS, SPECIES, HYBRID_NAMES, HYBRID_PROFILES,
-    BLENDS, blendKey, blendFor, HATCH_CHARGE, HYBRID_SUCCESS_CHANCE,
+    BLENDS, blendKey, blendFor, HATCH_CHARGE,
+    HYBRID_SUCCESS_CHANCE, BLEND_SUCCESS_CHANCE,
     REGIONS, regionById, regionUnlocked,
     // helpers
     makeRng, speciesById, typeMultiplier, defenseMultiplier, oppositeElement,
