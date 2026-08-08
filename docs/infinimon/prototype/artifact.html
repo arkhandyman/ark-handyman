@@ -143,8 +143,8 @@
      * against an AI that never misplays. These close that gap.
      */
     WILD_AI_ACCURACY: 0.5,      // chance a wild picks its best move vs. a random one
-    INCOMING_DAMAGE_MULT: 0.7,  // damage dealt TO the player's monsters
-    POST_BATTLE_HEAL: 0.5,      // fraction of max HP restored after every encounter
+    INCOMING_DAMAGE_MULT: 0.55, // damage dealt TO the player's monsters
+    POST_BATTLE_HEAL: 0.75,     // fraction of max HP restored after every encounter
 
     /*
      * A creature's patience. Letting a failed attunement keep the encounter
@@ -574,20 +574,37 @@
     }
   }
 
+  /*
+   * Moves unlock with level rather than all arriving at once.
+   *
+   * Four options on turn one was too much to read. A creature now starts with a
+   * single plain attack and earns the rest, the way Tackle comes first and
+   * everything interesting comes later.
+   */
+  const LEARN_AT = { basic: 1, signature: 4, coverage: 8, strong: 12 };
+
   function movesFor(elements, archetype) {
     const primary = elements[0];
     const secondary = elements[1] || oppositeElement(primary);
     const sig = archetype && SIGNATURES[archetype];
 
-    // Basic, Strong, and a coverage move stay constant; the fourth slot is the
-    // creature's own. Bred creatures with no archetype keep the old coverage
-    // move so nothing breaks.
     return [
-      makeMove(primary, 'basic'),
-      sig ? { ...sig, element: primary, tier: 'signature' } : makeMove(primary, 'standard'),
-      makeMove(primary, 'strong'),
-      makeMove(secondary, 'standard'),
+      { ...makeMove(primary, 'basic'), learnAt: LEARN_AT.basic },
+      sig ? { ...sig, element: primary, tier: 'signature', learnAt: LEARN_AT.signature }
+          : { ...makeMove(primary, 'standard'), learnAt: LEARN_AT.signature },
+      { ...makeMove(primary, 'strong'), learnAt: LEARN_AT.strong },
+      { ...makeMove(secondary, 'standard'), learnAt: LEARN_AT.coverage },
     ];
+  }
+
+  /** Moves a creature has actually learned at its current level. */
+  const learnedMoves = (m) => m.moves.filter((mv) => (mv.learnAt || 1) <= m.level);
+
+  /** The next move it will learn, for the level-up message. */
+  function nextMoveAt(m) {
+    const locked = m.moves.filter((mv) => (mv.learnAt || 1) > m.level)
+      .sort((a, b) => a.learnAt - b.learnAt);
+    return locked.length ? locked[0] : null;
   }
 
   // ---------------------------------------------------------------------------
@@ -752,7 +769,7 @@
   const activeMonster = (b) => b.team[b.activeIndex];
 
   function affordable(monster, focus) {
-    return monster.moves.filter((mv) => mv.focus <= focus);
+    return learnedMoves(monster).filter((mv) => mv.focus <= focus);
   }
 
   /**
@@ -1118,7 +1135,7 @@
 
   // Chance a cross-element pairing actually fuses. Cross-element hybrids are
   // meant to be a discovery, not a menu selection.
-  const HYBRID_SUCCESS_CHANCE = 0.10;
+  const HYBRID_SUCCESS_CHANCE = 0.25;
 
   /**
    * Breed two creatures. Returns an EGG — the result is decided now but stays
@@ -1368,6 +1385,7 @@
     effectiveSpd, effectiveAtk, effectiveDef, SIGNATURES, moveEffectText,
     createBattle, resolveTurn, activeMonster, affordable,
     canAttune, attune, attuneZoneWidth, attuneSpeed, fleeChanceAfterFailure, ATTUNE,
+    learnedMoves, nextMoveAt, LEARN_AT,
     breed, feedEgg, eggReady, randomWild,
     // progression
     xpToNext, grantXp, xpForWin, recomputeStats,
@@ -1639,7 +1657,8 @@ VIEWS.battle = () => {
   <div class="card">
     <h2>Moves</h2>
     <div class="grid2">
-      ${p.moves.map((mv, i) => {
+      ${p.moves.map((mv, i) => ({ mv, i })).filter(({ mv }) => (mv.learnAt || 1) <= p.level)
+        .map(({ mv, i }) => {
         const afford = mv.focus <= b.playerFocus;
         const dmg = G.expectedDamage(p, w, mv);
         const mult = G.defenseMultiplier(mv.element, w.elements);
@@ -1655,6 +1674,10 @@ VIEWS.battle = () => {
         </button>`;
       }).join('')}
     </div>
+    ${(() => {
+      const nx = G.nextMoveAt(p);
+      return nx ? `<div class="note">Learns <strong>${esc(nx.name)}</strong> at level ${nx.learnAt}.</div>` : '';
+    })()}
     <div class="row" style="margin-top:8px">
       <button data-act="attune" ${canTame ? '' : 'disabled'}
         style="${canTame ? 'border-color:var(--good);color:var(--good)' : ''}">Attune</button>
@@ -1732,7 +1755,7 @@ VIEWS.lab = () => {
   const canBreed = ready && S.catalysts > 0 && !full;
 
   return `<h1>Resonance Chamber</h1>
-  <div class="sub">Pair two of the same element to blend them</div>
+  <div class="sub">Same type = always a new creature. Different types usually copy a parent.</div>
   <div class="card">${resourceBar()}</div>
   ${eggCard()}
   <div class="card">
@@ -1761,16 +1784,20 @@ VIEWS.lab = () => {
       charge = G.HATCH_CHARGE.refined;
     } else {
       resultLabel = `Usually a ${esc(a.name)} or ${esc(b.name)}`;
-      detail = `<strong style="color:var(--gold)">${Math.round(G.HYBRID_SUCCESS_CHANCE * 100)}% chance</strong> ` +
-        `the elements fuse into ${esc(prof.name)} (${esc(hyb)}) instead — ` +
-        `<em>${esc(prof.look)}</em>. Cross-element eggs are slow: ` +
-        `${G.HATCH_CHARGE.hybrid} Charge if it fuses.`;
+      detail = `Only a <strong style="color:var(--gold)">${Math.round(G.HYBRID_SUCCESS_CHANCE * 100)}% chance</strong> ` +
+        `the two types fuse into ${esc(prof.name)} — <em>${esc(prof.look)}</em>. ` +
+        `The rest of the time you get one of the parents back. ` +
+        `Want something new for sure? Pair two of the <strong>same</strong> type.`;
       charge = G.HATCH_CHARGE.throwback;
     }
 
-    return `<div class="card">
+    const isNew = !!blend || false;
+    return `<div class="card" style="border-color:${isNew ? 'var(--good)' : 'var(--line)'}">
     <div class="stat"><span>Result</span><span>${resultLabel}</span></div>
-    <div class="note" style="margin:8px 0 10px">${detail}</div>
+    <div style="margin:8px 0 4px;font-weight:700;color:${isNew ? 'var(--good)' : 'var(--gold)'}">
+      ${isNew ? '&#10003; A brand new creature' : sameEl ? '&#8635; A stronger copy of the same creature'
+        : '&#9888; Usually a copy of a parent'}</div>
+    <div class="note" style="margin:4px 0 10px">${detail}</div>
     <div class="stat"><span>Charge to hatch</span><span>${charge}</span></div>
     <div class="stat"><span>Rift Catalyst</span><span>${S.catalysts} available</span></div>
     <button class="primary" style="margin-top:12px" data-act="breed" ${canBreed ? '' : 'disabled'}>
@@ -1815,7 +1842,11 @@ VIEWS.team = () => `<h1>Team</h1>
       <div class="stat"><span>XP</span><span>${m.level >= G.MAX_LEVEL ? 'max level'
         : (m.xp || 0) + ' / ' + G.xpToNext(m.level)}</span></div>
       <div class="stat"><span>Bond</span><span>${m.bond}${m.bond >= 60 ? ' (bonus active)' : ''}</span></div>
-      <div class="stat"><span>Moves</span><span>${m.moves.map((v) => v.name).join(', ')}</span></div>
+      <div class="stat"><span>Moves</span><span>${G.learnedMoves(m).map((v) => v.name).join(', ')}</span></div>
+      ${(() => {
+        const nx = G.nextMoveAt(m);
+        return nx ? `<div class="stat"><span>Next move</span><span>${esc(nx.name)} at Lv ${nx.learnAt}</span></div>` : '';
+      })()}
     </div>
     ${i > 0 ? `<button style="margin-top:8px" data-act="promote" data-uid="${m.uid}">Move to front</button>` : ''}
   </div>`).join('') || '<div class="card meta">Empty.</div>'}
@@ -1948,8 +1979,13 @@ function awardXp(party, wildLevel) {
   const gained = [];
   party.forEach((m) => {
     if (m.hp <= 0) return;
+    const before = m.level;
     const { levels } = G.grantXp(m, G.xpForWin(m.level, wildLevel));
-    if (levels) gained.push(`${m.name} reached Lv ${m.level}`);
+    if (levels) {
+      const learned = m.moves.filter((mv) => mv.learnAt > before && mv.learnAt <= m.level);
+      gained.push(`${m.name} reached Lv ${m.level}` +
+        (learned.length ? ` and learned ${learned.map((mv) => mv.name).join(' and ')}` : ''));
+    }
   });
   return gained.length ? ' ' + gained.join('. ') + '.' : '';
 }

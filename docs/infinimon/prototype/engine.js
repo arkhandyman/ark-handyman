@@ -39,8 +39,8 @@
      * against an AI that never misplays. These close that gap.
      */
     WILD_AI_ACCURACY: 0.5,      // chance a wild picks its best move vs. a random one
-    INCOMING_DAMAGE_MULT: 0.7,  // damage dealt TO the player's monsters
-    POST_BATTLE_HEAL: 0.5,      // fraction of max HP restored after every encounter
+    INCOMING_DAMAGE_MULT: 0.55, // damage dealt TO the player's monsters
+    POST_BATTLE_HEAL: 0.75,     // fraction of max HP restored after every encounter
 
     /*
      * A creature's patience. Letting a failed attunement keep the encounter
@@ -470,20 +470,37 @@
     }
   }
 
+  /*
+   * Moves unlock with level rather than all arriving at once.
+   *
+   * Four options on turn one was too much to read. A creature now starts with a
+   * single plain attack and earns the rest, the way Tackle comes first and
+   * everything interesting comes later.
+   */
+  const LEARN_AT = { basic: 1, signature: 4, coverage: 8, strong: 12 };
+
   function movesFor(elements, archetype) {
     const primary = elements[0];
     const secondary = elements[1] || oppositeElement(primary);
     const sig = archetype && SIGNATURES[archetype];
 
-    // Basic, Strong, and a coverage move stay constant; the fourth slot is the
-    // creature's own. Bred creatures with no archetype keep the old coverage
-    // move so nothing breaks.
     return [
-      makeMove(primary, 'basic'),
-      sig ? { ...sig, element: primary, tier: 'signature' } : makeMove(primary, 'standard'),
-      makeMove(primary, 'strong'),
-      makeMove(secondary, 'standard'),
+      { ...makeMove(primary, 'basic'), learnAt: LEARN_AT.basic },
+      sig ? { ...sig, element: primary, tier: 'signature', learnAt: LEARN_AT.signature }
+          : { ...makeMove(primary, 'standard'), learnAt: LEARN_AT.signature },
+      { ...makeMove(primary, 'strong'), learnAt: LEARN_AT.strong },
+      { ...makeMove(secondary, 'standard'), learnAt: LEARN_AT.coverage },
     ];
+  }
+
+  /** Moves a creature has actually learned at its current level. */
+  const learnedMoves = (m) => m.moves.filter((mv) => (mv.learnAt || 1) <= m.level);
+
+  /** The next move it will learn, for the level-up message. */
+  function nextMoveAt(m) {
+    const locked = m.moves.filter((mv) => (mv.learnAt || 1) > m.level)
+      .sort((a, b) => a.learnAt - b.learnAt);
+    return locked.length ? locked[0] : null;
   }
 
   // ---------------------------------------------------------------------------
@@ -648,7 +665,7 @@
   const activeMonster = (b) => b.team[b.activeIndex];
 
   function affordable(monster, focus) {
-    return monster.moves.filter((mv) => mv.focus <= focus);
+    return learnedMoves(monster).filter((mv) => mv.focus <= focus);
   }
 
   /**
@@ -1014,7 +1031,7 @@
 
   // Chance a cross-element pairing actually fuses. Cross-element hybrids are
   // meant to be a discovery, not a menu selection.
-  const HYBRID_SUCCESS_CHANCE = 0.10;
+  const HYBRID_SUCCESS_CHANCE = 0.25;
 
   /**
    * Breed two creatures. Returns an EGG — the result is decided now but stays
@@ -1264,6 +1281,7 @@
     effectiveSpd, effectiveAtk, effectiveDef, SIGNATURES, moveEffectText,
     createBattle, resolveTurn, activeMonster, affordable,
     canAttune, attune, attuneZoneWidth, attuneSpeed, fleeChanceAfterFailure, ATTUNE,
+    learnedMoves, nextMoveAt, LEARN_AT,
     breed, feedEgg, eggReady, randomWild,
     // progression
     xpToNext, grantXp, xpForWin, recomputeStats,
