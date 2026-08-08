@@ -854,6 +854,67 @@ const S = {
   attune: null,
 };
 
+// ---------------------------------------------------------------------------
+// persistence
+//
+// Monsters are rebuilt through createMonster rather than restored wholesale, so
+// derived fields (moves, computed stats) always match the current engine. Only
+// the things the engine cannot re-derive are stored.
+// ---------------------------------------------------------------------------
+
+const SAVE_KEY = 'infinimon.save.v1';
+
+function packMonster(m) {
+  return {
+    s: m.speciesId, n: m.name, e: m.elements, b: m.bases,
+    lv: m.level, xp: m.xp || 0, bo: m.bond, hp: m.hp,
+    rb: !!m.rareBloom, br: !!m.bred,
+  };
+}
+
+function unpackMonster(d) {
+  const m = G.createMonster({
+    speciesId: d.s, elements: d.e, bases: d.b, name: d.n,
+    level: d.lv, bond: d.bo, rareBloom: d.rb, bred: d.br,
+  });
+  m.xp = d.xp;
+  m.hp = Math.max(1, Math.min(m.maxHp, d.hp));
+  return m;
+}
+
+function saveGame() {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      team: S.team.map(packMonster),
+      crystals: S.crystals,
+      catalysts: S.catalysts,
+      charge: S.charge,
+      dex: [...S.dex],
+      banked: S.banked,
+    }));
+  } catch (e) { /* private browsing or quota — play on without a save */ }
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (!d.team || !d.team.length) return false;
+    S.team = d.team.map(unpackMonster);
+    S.crystals = Object.assign(S.crystals, d.crystals || {});
+    S.catalysts = d.catalysts ?? S.catalysts;
+    S.charge = d.charge ?? 0;
+    S.dex = new Set(d.dex || []);
+    S.banked = d.banked || {};
+    return true;
+  } catch (e) { return false; }
+}
+
+function clearSave() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* nothing to clear */ }
+}
+
 const el = (e) => G.ELEMENTS[e];
 const initial = (m) => m.name[0].toUpperCase();
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
@@ -932,6 +993,8 @@ VIEWS.home = () => {
       <button data-act="view" data-v="team">Team</button>
     </div>
     ${alive ? '' : `<button style="margin-top:8px" data-act="rest">Rest &amp; heal (all)</button>`}
+    <div class="note">Progress saves automatically in this browser.
+      <a href="#" data-act="reset" style="color:var(--dim)">Start over</a>.</div>
   </div>
   <div class="card">
     <h2>Your Infinimon</h2>
@@ -1096,6 +1159,7 @@ function render() {
   const log = document.getElementById('log');
   if (log) log.scrollTop = log.scrollHeight;
   if (S.view === 'attune') startNeedle();
+  if (S.team.length) saveGame();
 }
 
 function show(title, body, mon, good) {
@@ -1110,9 +1174,22 @@ function addMonster(m) {
 }
 
 app.addEventListener('click', (ev) => {
-  const btn = ev.target.closest('button[data-act]');
+  const btn = ev.target.closest('[data-act]');
   if (!btn) return;
+  if (btn.tagName === 'A') ev.preventDefault();
   const { act } = btn.dataset;
+
+  if (act === 'reset') {
+    if (!confirm('Start over? This clears your saved progress.')) return;
+    clearSave();
+    S.team = [];
+    S.crystals = { spark: 2, tide: 2, ember: 2, verdant: 2, terra: 2, gale: 2 };
+    S.catalysts = 3; S.charge = 0;
+    S.dex = new Set(); S.banked = {}; S.battle = null; S.breedPick = [];
+    S.view = 'start';
+    render();
+    return;
+  }
 
   if (act === 'pick') {
     addMonster(G.createMonster({ speciesId: btn.dataset.id, level: 5, bond: 40 }));
@@ -1350,5 +1427,6 @@ function doTap() {
   }
 }
 
+if (loadGame()) S.view = 'home';
 render();
 </script>
