@@ -2,7 +2,7 @@
 
 **Status:** Sections 1–10 complete. Battle, taming, and breeding are implemented and simulation-validated in [`prototype/`](./prototype/) — several numbers in §3, §5, and §7 were corrected by what the simulation found.
 
-**Scope target for v1:** 6 elements · 12 tameable base monsters · 15 bred hybrids · ~27 total dex · single-player · local save · no backend.
+**Scope target for v1:** 6 elements · 18 tameable base creatures · 18 same-element blends · 15 rare cross-element hybrids · **51 total dex** · US regions · single-player · local save · no backend.
 
 > **All names in this document are placeholders.** See [`naming.md`](./naming.md) for the full register, the convention behind each name, and a column to record your final choices. Creature design is founder-led (§9) — names and designs are yours to set.
 
@@ -13,11 +13,11 @@
 | § | Section | |
 |---|---|---|
 | 1 | [Core Loop](#1-core-loop) | What the player does |
-| 2 | [Elements](#2-elements) | Six-element cycle, matchup grid, 15 hybrids |
-| 3 | [Base Roster](#3-base-roster) | The 12 tameable monsters |
+| 2 | [Elements](#2-elements) | Six-element cycle, matchup grid, 15 hybrid elements |
+| 3 | [Base Roster](#3-base-roster) | The 18 tameable creatures |
 | 4 | [Taming](#4-taming--attunement) | Attunement |
 | 5 | [Battle](#5-battle) | Turn structure, Focus, damage formula |
-| 6 | [Breeding](#6-breeding) | Pairing rules, inheritance, Rare Bloom |
+| 6 | [Breeding](#6-breeding) | Blending, eggs, rare hybrids |
 | 7 | [Stats & Leveling](#7-stats--leveling) | Growth curve, XP, Bond |
 | 8 | [Story Spine](#8-story-spine) | Four characters, three acts, six beats |
 | 9 | [Art Specification](#9-art-specification) | Sketch → AI refinement pipeline, sprite specs |
@@ -51,8 +51,8 @@ You are a scientist tracking creatures pulled out of a collapsing dimension, and
 | Explore | New species sightings, crystals, story beats | Curiosity — what lives here? |
 | Battle | Charge (breeding fuel), levels | Competence — I'm getting better at this |
 | Tame | A new team member, dex entry | Collection — I want one of those |
-| Breed | A hybrid that didn't exist before | Discovery — what do these two make? |
-| New zone | Higher-tier elements, harder tames | Progress — the story moves |
+| Breed | An egg, then a creature blending both parents | Discovery — what do these two make? |
+| New region | New creatures, harder tames | Progress — the story moves |
 
 **Critical design point:** Charge (the resource that hatches eggs) is earned by *battling*, not by waiting on a real-time timer. Breeding is a reward for playing, not a reason to close the app. No energy meters in v1.
 
@@ -151,28 +151,36 @@ Averaging on defense means hybrids are *resilient but not immune* — a Steam hy
 
 ## 3. Base Roster
 
-Twelve tameable monsters, two per element.
+Eighteen tameable creatures — **three per element**, each with a distinct body **archetype**.
 
-> **These stat lines were solved by simulation, not assigned by hand.** The original design gave every monster a 180-point total for "trivial fairness." `prototype/balance.js` disproved that: equal budgets produced a **92-point win-rate spread** (Coalpaw 99.7%, Kitewing 7.7%), with `r = 0.987` correlation between `HP × (DEF + C) × ATK` and win rate. Stat points are not fungible — HP and DEF multiply each other, while SPD bought almost nothing. See §5 for the mechanical fix and §7 for the full finding.
+The archetype matters as much as the element: it is what blending combines (§6). A fire *fox* bred with a fire *lizard* produces a fire creature carrying the fox’s ears and brush tail on a lizard’s frame.
 
-| Name | Element | HP | ATK | DEF | SPD | Total | Rarity | Personality | Look |
+> **These stat lines were solved by simulation, not assigned by hand.** The original design gave every creature a 180-point total for "trivial fairness." `prototype/balance.js` disproved that: equal budgets produced a **92-point win-rate spread** (Coalpaw 99.7%, Kitewing 7.7%), with `r = 0.987` correlation between `HP × (DEF + C) × ATK` and win rate. Stat points are not fungible — HP and DEF multiply each other, while SPD bought almost nothing. See §5 for the mechanical fix and §7 for the full finding.
+
+| Name | Element | Archetype | HP | ATK | DEF | SPD | Total | Rarity | Look |
 |---|---|---|---|---|---|---|---|---|---|
-| **Voltmoth** | Spark | 36 | 56 | 25 | 65 | 182 | Common | Skittish, drawn to light | Pale moth, lightning veins flickering through its wings |
-| **Bolthorn** | Spark | 53 | 48 | 43 | 30 | 174 | Uncommon | Stubborn, plants its feet | Stocky ram, arcing charge between curled horns |
-| **Puddlup** | Tide | 60 | 35 | 55 | 30 | 180 | Common | Cheerful, endlessly patient | Round puddle-creature, oversized eyes, wobbles |
-| **Finwhisk** | Tide | 41 | 51 | 30 | 60 | 182 | Common | Playful, never still | Darting fish-otter with whisker fins |
-| **Wickle** | Ember | 36 | 61 | 25 | 60 | 182 | Common | Timid but brave when cornered | Fox kit with a candle-flame tail |
-| **Coalpaw** | Ember | 52 | 56 | 42 | 20 | 170 | Rare | Slow to trust, fiercely loyal after | Heavy badger, glowing cracks across its hide |
-| **Sproutle** | Verdant | 55 | 40 | 55 | 30 | 180 | Common | Curious, follows you home | Sapling creature with leaf-bud ears |
-| **Thornip** | Verdant | 39 | 59 | 30 | 50 | 178 | Common | Scrappy, picks fights | Bristly root-rodent, thorn ridge along its back |
-| **Pebbet** | Terra | 60 | 40 | 65 | 15 | 180 | Uncommon | Unhurried, immovable | Small stone tortoise, moss on the shell |
-| **Burrowl** | Terra | 44 | 49 | 39 | 45 | 177 | Uncommon | Watchful, hoards shiny things | Owl with earth-toned feathers and digging talons |
-| **Kitewing** | Gale | 33 | 50 | 33 | 75 | 191 | Rare | Aloof, hard to hold onto | Paper-thin gliding manta, translucent |
-| **Ruffle** | Gale | 48 | 48 | 39 | 40 | 175 | Common | Blustery, loud, harmless | Puffed-up bird, permanently windswept |
+| **Voltmoth** | Spark | Moth | 36 | 56 | 25 | 65 | 182 | Common | Pale moth, lightning veins in its wings |
+| **Bolthorn** | Spark | Ram | 54 | 49 | 43 | 30 | 176 | Uncommon | Stocky ram, charge arcing between horns |
+| **Snapcoil** | Spark | Serpent | 39 | 54 | 29 | 55 | 177 | Common | Ribbon-thin serpent that snaps like a live wire |
+| **Puddlup** | Tide | Blob | 61 | 35 | 56 | 30 | 182 | Common | Round puddle-creature, oversized eyes |
+| **Finwhisk** | Tide | Otter | 40 | 50 | 30 | 60 | 180 | Common | Darting fish-otter with whisker fins |
+| **Brineclaw** | Tide | Crab | 50 | 45 | 59 | 25 | 179 | Uncommon | Barnacled crab with one oversized claw |
+| **Wickle** | Ember | Fox | 36 | 60 | 25 | 60 | 181 | Common | Fox kit with a candle-flame tail |
+| **Coalpaw** | Ember | Badger | 52 | 56 | 42 | 20 | 170 | Rare | Heavy badger, glowing cracks in its hide |
+| **Scorchtail** | Ember | Lizard | 44 | 54 | 39 | 40 | 177 | Common | Sun-basking lizard whose tail burns like a wick |
+| **Sproutle** | Verdant | Sapling | 56 | 41 | 56 | 30 | 183 | Common | Sapling creature with leaf-bud ears |
+| **Thornip** | Verdant | Rodent | 39 | 60 | 30 | 50 | 179 | Common | Bristly root-rodent, thorn ridge |
+| **Fernfawn** | Verdant | Deer | 45 | 45 | 35 | 55 | 180 | Uncommon | Slender fawn with fern fronds for a tail |
+| **Pebbet** | Terra | Tortoise | 61 | 41 | 66 | 15 | 183 | Uncommon | Small stone tortoise, moss on the shell |
+| **Burrowl** | Terra | Owl | 45 | 50 | 40 | 45 | 180 | Uncommon | Owl with earth feathers and digging talons |
+| **Shalebug** | Terra | Beetle | 50 | 45 | 55 | 30 | 180 | Common | Beetle plated in flat shale, dusty underneath |
+| **Kitewing** | Gale | Manta | 33 | 50 | 33 | 75 | 191 | Rare | Paper-thin gliding manta, translucent |
+| **Ruffle** | Gale | Bird | 48 | 48 | 39 | 40 | 175 | Common | Puffed-up bird, permanently windswept |
+| **Breezel** | Gale | Weasel | 40 | 50 | 35 | 55 | 180 | Common | Long weasel that runs just ahead of the wind |
 
-**Totals now range 170–191, and that spread is the point.** Fast, frail monsters need a slightly larger budget because SPD buys less than HP and DEF do. Measured win-rate spread is **10.8 points**, down from 92, and the correlation with the power formula has collapsed to `r = −0.145`.
+**Totals range 170–191, and that spread is the point.** Fast, frail creatures need a slightly larger budget because SPD buys less than HP and DEF do. Measured win-rate spread across all 18 is **12.8 points**, down from 92, and the correlation with the power formula has collapsed to `r = −0.145`.
 
-**Rarity distribution:** 7 Common · 3 Uncommon · 2 Rare. Rarity sets the Trust requirement for taming (§4) and the spawn rate per zone — never raw power.
+**Rarity** sets the Trust requirement for taming (§4) and the spawn rate per region — never raw power.
 
 **Starter choice:** the player picks one of Wickle, Puddlup, or Sproutle at the start — a soft Fire/Water/Grass triangle that players already understand, without committing to it as the whole type system.
 
