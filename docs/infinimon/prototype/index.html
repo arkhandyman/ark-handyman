@@ -275,15 +275,21 @@ VIEWS.attune = () => {
   const req = G.TRUST_REQUIRED[w.rarity];
   const lowHp = w.hp / w.maxHp < 0.25;
   const crystals = S.crystals[w.elements[0]];
+  const landed = a.taps.filter(Boolean).length;
+  const running = landed + (a.crystal ? 1 : 0) + (lowHp ? 1 : 0) + banked;
 
   return `<h1>Attunement</h1>
-  <div class="sub">Match ${esc(w.name)}'s frequency &middot; ${a.taps.length}/3 taps</div>
+  <div class="sub">Match ${esc(w.name)}'s frequency &middot; tap ${a.taps.length + 1} of 3</div>
 
   <div class="card">
-    <div class="stat"><span>Trust required</span><span>${req}</span></div>
-    <div class="stat"><span>Banked from past attempts</span><span>+${banked}</span></div>
-    <div class="stat"><span>Below 25% HP bonus</span><span>${lowHp ? '+1' : '—'}</span></div>
-    <div class="stat"><span>Crystal offered</span><span>${a.crystal ? '+1, wider zone' : '—'}</span></div>
+    <div class="stat"><span>Trust needed</span><span>${req}</span></div>
+    <div class="stat"><span>Taps landed</span><span>+${landed}</span></div>
+    <div class="stat"><span>Crystal offered</span><span>${a.crystal ? '+1' : '—'}</span></div>
+    <div class="stat"><span>Weakened below 25% HP</span><span>${lowHp ? '+1' : '—'}</span></div>
+    <div class="stat"><span>Banked from earlier tries</span><span>${banked ? '+' + banked : '—'}</span></div>
+    <div class="stat" style="border:none;padding-top:6px">
+      <span style="color:var(--ink);font-weight:700">Trust so far</span>
+      <span style="color:${running >= req ? 'var(--good)' : 'var(--ink)'}">${running} / ${req}</span></div>
   </div>
 
   <div class="card">
@@ -294,11 +300,13 @@ VIEWS.attune = () => {
     <div class="trust">
       ${[0, 1, 2].map((i) => `<div class="tdot ${a.taps[i] ? 'hit' : ''}"></div>`).join('')}
     </div>
-    <button class="primary" style="margin-top:12px" data-act="tap">Tap when the needle is in the green</button>
+    <button class="primary" style="margin-top:12px" data-act="tap">Tap while the needle is in the green</button>
     ${!a.crystal && a.taps.length === 0 ? `<button style="margin-top:8px" data-act="crystal"
-      ${crystals > 0 ? '' : 'disabled'}>Offer a ${el(w.elements[0]).name} Crystal (${crystals} left)</button>` : ''}
-    <div class="note">A failed attunement is never wasted — shortfall banks toward
-    your next encounter with this species.</div>
+      ${crystals > 0 ? '' : 'disabled'}>Offer a ${el(w.elements[0]).name} Crystal (${crystals} left)
+      &mdash; +1 Trust, wider zone</button>` : ''}
+    <div class="note">The zone stays put, and it widens while the needle slows as
+    ${esc(w.name)} settles. If this attempt falls short you stay in the fight and
+    keep every point of Trust you earned.</div>
   </div>`;
 };
 
@@ -350,6 +358,8 @@ VIEWS.team = () => `<h1>Team</h1>
     ${monRow(m)}${hpBar(m)}
     <div style="margin-top:8px">
       <div class="stat"><span>ATK / DEF / SPD</span><span>${m.atk} / ${m.def} / ${m.spd}</span></div>
+      <div class="stat"><span>XP</span><span>${m.level >= G.MAX_LEVEL ? 'max level'
+        : (m.xp || 0) + ' / ' + G.xpToNext(m.level)}</span></div>
       <div class="stat"><span>Bond</span><span>${m.bond}${m.bond >= 60 ? ' (bonus active)' : ''}</span></div>
       <div class="stat"><span>Moves</span><span>${m.moves.map((v) => v.name).join(', ')}</span></div>
     </div>
@@ -398,7 +408,10 @@ app.addEventListener('click', (ev) => {
 
   else if (act === 'explore') {
     const party = S.team.filter((m) => m.hp > 0).slice(0, 3);
-    const wild = G.randomWild(rng, Math.max(3, S.wildLevel + Math.floor(rng() * 3) - 1));
+    // Wild levels track your strongest monster and never outrun it. Previously
+    // they rolled 5-7 against a starter permanently stuck at 5.
+    const best = Math.max(...party.map((m) => m.level));
+    const wild = G.randomWild(rng, Math.max(3, best - 1 + Math.floor(rng() * 2)));
     S.battle = G.createBattle(party, wild, rng);
     S.battle.log.push(`A wild ${wild.name} appears!`);
     S.view = 'battle';
@@ -443,6 +456,26 @@ app.addEventListener('click', (ev) => {
   render();
 });
 
+/** Award XP to everyone still standing, and report any level-ups. */
+function awardXp(party, wildLevel) {
+  const gained = [];
+  party.forEach((m) => {
+    if (m.hp <= 0) return;
+    const { levels } = G.grantXp(m, G.xpForWin(m.level, wildLevel));
+    if (levels) gained.push(`${m.name} reached Lv ${m.level}`);
+  });
+  return gained.length ? ' ' + gained.join('. ') + '.' : '';
+}
+
+/** Everyone recovers a chunk of HP after every encounter, win or lose. */
+function healParty(fraction) {
+  S.team.forEach((m) => {
+    m.status = null;
+    m.hp = Math.min(m.maxHp, Math.max(m.hp, 0) + Math.round(m.maxHp * fraction));
+    if (m.hp <= 0) m.hp = Math.round(m.maxHp * fraction);
+  });
+}
+
 function afterTurn() {
   const b = S.battle;
   if (!b.over) return;
@@ -453,13 +486,18 @@ function afterTurn() {
     b.team.forEach((m) => { if (m.hp > 0) m.bond = Math.min(100, m.bond + 2); });
     const e = b.wild.elements[0];
     S.crystals[e] += 1;
+    const lv = awardXp(b.team, b.wild.level);
     S.battle = null;
-    show('The wild Infinimon fled', `It escaped before you could attune. +${gain} Charge, +1 ${el(e).name} Crystal.`, null, false);
+    healParty(G.CONFIG.POST_BATTLE_HEAL);
+    show('The wild Infinimon fled', `It escaped before you could attune. ` +
+      `+${gain} Charge, +1 ${el(e).name} Crystal.` + lv, null, false);
   } else {
     S.team.forEach((m) => { m.bond = Math.max(0, m.bond - 5); });
     Object.keys(S.crystals).forEach((k) => { S.crystals[k] = Math.floor(S.crystals[k] / 2); });
     S.battle = null;
-    show('Recalled to the Lab', 'Your party is out. You lost half your crystals — nothing else.', null, false);
+    // Recalled to the Lab means a full recovery — losing costs crystals, not time.
+    S.team.forEach((m) => { m.hp = m.maxHp; m.status = null; });
+    show('Recalled to the Lab', 'Your party is patched up. You lost half your crystals — nothing else.', null, false);
   }
 }
 
@@ -486,25 +524,36 @@ function doBreed() {
 
 let raf = null;
 
-function zoneWidth() { return S.attune.crystal ? 30 : 21; }
+function zoneWidth() {
+  return G.attuneZoneWidth(S.battle.wild, {
+    crystalMatch: S.attune.crystal,
+    tapsLanded: S.attune.taps.filter(Boolean).length,
+  });
+}
+
+function placeZone() {
+  const zone = document.getElementById('zone');
+  if (!zone) return;
+  const w = zoneWidth();
+  // The zone is chosen once per attempt and then held. Widening it as taps land
+  // keeps it anchored on the same centre so the target never jumps.
+  if (S.attune.zoneCentre == null) S.attune.zoneCentre = 30 + rng() * 40;
+  const start = Math.max(0, Math.min(100 - w, S.attune.zoneCentre - w / 2));
+  S.attune.zoneStart = start;
+  S.attune.zoneW = w;
+  zone.style.left = start + '%';
+  zone.style.width = w + '%';
+}
 
 function startNeedle() {
   stopNeedle();
-  const track = document.getElementById('track');
-  const zone = document.getElementById('zone');
   const needle = document.getElementById('needle');
-  if (!track) return;
+  if (!needle) return;
+  placeZone();
 
-  const w = zoneWidth();
-  S.attune.zoneStart = 12 + rng() * (76 - w);
-  zone.style.left = S.attune.zoneStart + '%';
-  zone.style.width = w + '%';
-
-  const speed = 0.9 + (S.battle.wild.rarity === 'rare' ? 0.5
-    : S.battle.wild.rarity === 'uncommon' ? 0.25 : 0);
   let t = S.attune.t || 0;
-
   const step = () => {
+    const speed = G.attuneSpeed(S.battle.wild, S.attune.taps.filter(Boolean).length);
     t += 0.016 * speed;
     // triangle wave, 0..1, so the needle sweeps back and forth
     const pos = Math.abs(((t % 2) + 2) % 2 - 1);
@@ -520,16 +569,13 @@ function stopNeedle() { if (raf) cancelAnimationFrame(raf); raf = null; }
 
 function doTap() {
   const a = S.attune;
-  const w = zoneWidth();
-  const hit = a.pos >= a.zoneStart && a.pos <= a.zoneStart + w;
+  const hit = a.pos >= a.zoneStart && a.pos <= a.zoneStart + a.zoneW;
   a.taps.push(hit);
 
   if (a.taps.length < 3) {
-    // reposition the zone between taps so it stays a read, not a rhythm
-    const nz = 12 + rng() * (76 - w);
-    a.zoneStart = nz;
-    const zone = document.getElementById('zone');
-    if (zone) zone.style.left = nz + '%';
+    // The zone stays where it is and widens; the needle slows. Both curves run
+    // in the player's favour as the creature settles.
+    placeZone();
     render();
     return;
   }
@@ -550,16 +596,37 @@ function doTap() {
     addMonster(wild);
     const gain = 8 + Math.floor(rng() * 8);
     S.charge += gain;
+    const lv = awardXp(S.battle.team, wild.level);
     S.battle = null;
-    S.view = 'result';
     show(`${wild.name} joined you!`,
-      `Trust ${result.trust} of ${result.required}. +${gain} Charge.`, wild, true);
+      `Trust ${result.trust} of ${result.required}. +${gain} Charge.` + lv, wild, true);
   } else {
-    S.battle = null;
-    S.view = 'result';
-    show(`${wild.name} slipped away`,
-      `Trust ${result.trust} of ${result.required}. Next time you meet a ${wild.name}, ` +
-      `you start with +${result.newBanked} Trust.`, null, false);
+    // Falling short no longer ends the encounter outright. You usually stay in
+    // the fight with your Trust banked — but the creature's patience is finite,
+    // so each failure risks it bolting. That keeps retries from making taming a
+    // formality without ever wasting the progress you earned.
+    S.attune = null;
+    S.battle.attuneFails = (S.battle.attuneFails || 0) + 1;
+    const bolts = rng() < G.fleeChanceAfterFailure(S.battle.attuneFails);
+
+    if (bolts) {
+      const gain = 4 + Math.floor(rng() * 5);
+      S.charge += gain;
+      S.battle = null;
+      healParty(G.CONFIG.POST_BATTLE_HEAL);
+      show(`${wild.name} bolted`,
+        `Trust reached ${result.trust} of ${result.required}. It got away — but next time ` +
+        `you meet a ${wild.name} you start with +${result.newBanked} Trust. +${gain} Charge.`,
+        null, false);
+      return;
+    }
+
+    S.view = 'battle';
+    S.battle.log.push(
+      `Attunement reached ${result.trust} of ${result.required} Trust. ` +
+      `${wild.name} is wary but still here — +${result.newBanked} Trust banked.`);
+    G.resolveTurn(S.battle, null); // trying costs you the turn
+    afterTurn();
   }
 }
 

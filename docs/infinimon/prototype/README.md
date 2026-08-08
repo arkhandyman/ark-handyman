@@ -24,17 +24,17 @@ via a plain `<script src>` rather than an ES module specifically so it does.
 - The six-element cycle and all 15 hybrid pairings (§2)
 - All 12 base monsters with simulation-solved stat lines (§3)
 - Attunement taming: the 50% HP gate, the three-tap frequency check, crystal
-  offerings, the sub-25% bonus, and banked Trust on failure (§4)
+  offerings, the sub-25% bonus, banked Trust, and creature patience (§4)
 - Turn-based battle: Focus economy, damage formula, glancing blows, Focus
   surge, three status effects, SPD turn order with visible coin flips (§5)
 - Breeding: hybrid and same-element pairing, stat inheritance, Rare Bloom (§6)
-- Proportional stat growth and the Bond bonus (§7)
+- Proportional stat growth, XP and leveling, and the Bond bonus (§7)
 
 ## What's deliberately missing
 
-Story, zones, the four playable characters, XP and leveling, save/load, and art.
-The prototype exists to answer one question — *do taming and breeding feel
-good?* — so everything not serving that was left out.
+Story, zones, the four playable characters, save/load, and art. The prototype
+exists to answer one question — *do taming and breeding feel good?* — so
+everything not serving that was left out.
 
 Creature art is placeholder colored blobs. Creature design is founder-led (§9);
 these are stand-ins so the mechanics can be felt without waiting on art.
@@ -42,6 +42,7 @@ these are stand-ins so the mechanics can be felt without waiting on art.
 ## Run the simulations
 
 ```bash
+node playtest.js        # player experience — difficulty, not balance
 node simulate.js        # full validation report (~1 min)
 node simulate.js 100    # more runs per matchup, tighter numbers
 node balance.js         # per-monster win rates + power-score correlation
@@ -50,6 +51,19 @@ node autobalance.js     # re-solve stat lines by gradient descent
 ```
 
 Everything uses a seeded RNG, so runs are reproducible.
+
+### Balance vs. difficulty
+
+`simulate.js`, `balance.js`, `tune.js` and `autobalance.js` measure the
+**symmetric** game — equal levels, both sides played optimally. They pin
+`INCOMING_DAMAGE_MULT: 1` and `WILD_AI_ACCURACY: 1` at the top, because the
+player-facing knobs would otherwise hand a permanent edge to whichever creature
+sits in the "player" slot and corrupt every matchup number.
+
+`playtest.js` is the opposite test: a fresh save, one starter, real healing, XP,
+and taming attempts at a given tap accuracy. Balance says whether the game is
+*fair*; playtest says whether it is *fun*. The first round of feedback came from
+a gap only the second one can see.
 
 ## What the simulations found
 
@@ -99,6 +113,35 @@ inequality is the finding — fast, frail monsters need a larger budget.
 | Rare Bloom rate | 4.8% | 5% |
 | Hybrids reachable | 15 / 15 | 15 |
 
+## The difficulty pass
+
+Playtest feedback: creatures lost health too fast, and the taming meter was too
+hard. Both were real, and both traced to things the balance harness structurally
+could not see — it measures equal-level 1v1 with both sides played optimally,
+while a real player was fighting *higher-level* creatures, with *no healing*,
+*no XP*, and an opponent that *never misplayed*.
+
+Fixed:
+
+| Change | Before | After |
+|---|---|---|
+| Wild AI | always optimal | best move 50% of the time |
+| Damage to the player | full | ×0.7 |
+| Healing | none | 50% of max HP after every encounter |
+| Losing | half your crystals, stay hurt | half your crystals, full heal |
+| XP / leveling | **not implemented** | implemented |
+| Wild level | 5–7 vs. a starter frozen at 5 | tracks your best creature |
+| Trust needed | 3 / 4 / 5 of max 3 taps | 2 / 3 / 4 |
+| Green zone | 21%, and it **moved** between taps | 34%, fixed, widens as taps land |
+| Needle speed | constant | slows as the creature settles |
+| Failed attunement | creature gone, encounter over | stay in the fight, Trust banked |
+
+Then a second finding from `playtest.js`: letting failure keep the encounter
+alive made taming a *formality* — **12 tames from 12 encounters**, since
+retrying with banked Trust eventually always works. Creature patience (a 28%
+flee chance on the first failure, +22% per subsequent one) restores the stakes
+without ever wasting earned progress.
+
 ## Known open item
 
 Type advantage wins **89.9%** of fights (neutral 48.9%, disadvantage 10.3%).
@@ -115,6 +158,7 @@ If it feels deterministic in play, narrow the multipliers from 1.5/0.75 toward
 | `index.html` | Playable prototype |
 | `play.html` | Generated single-file build |
 | `build-artifact.js` | Inlines `engine.js` into `index.html` |
+| `playtest.js` | Player-experience simulation — difficulty, not balance |
 | `simulate.js` | Validation report |
 | `tune.js` | Constant sweep |
 | `balance.js` | Per-monster analysis |

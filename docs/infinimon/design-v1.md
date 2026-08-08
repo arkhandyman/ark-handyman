@@ -196,32 +196,38 @@ A handheld device the family built from salvaged rift tech. It reads a monster's
 2. **Below 50% HP, Attune unlocks.** Choosing it pauses the battle and opens the Resonator.
 3. **Optionally offer a Resonance Crystal** matching the monster's element. Mismatched crystals do nothing and are consumed — reading the element right is part of the skill.
 4. **The attunement check.** A needle sweeps across a frequency bar. You tap three times, trying to land inside the green zone. Works identically with touch or mouse.
+
+   > **Revised after playtesting.** The first version swept the needle *and* repositioned the target zone between every tap — two difficulty sources stacked, and it read as punishing. The zone now **stays put for the whole attempt**, starts far wider (34% of the track, up from 21%), and **grows with every tap that lands**, while the needle **slows down** as the creature settles. Both curves run in the player's favour, and both are thematic: it's calming down, so it gets easier to read.
+
 5. **Score the Trust.**
 
 | Source | Trust |
 |---|---|
 | Each tap inside the green zone | +1 |
-| Matching Resonance Crystal offered | +1, and the green zone widens ~40% |
-| Target is below 25% HP | +1 |
+| Matching Resonance Crystal offered | +1, and the zone widens further |
+| Target is below 25% HP | +1, and the zone widens (a hurt creature is calmer) |
+| Banked from earlier failed attempts | up to +3 |
 
 6. **Compare against the requirement.**
 
 | Rarity | Trust needed |
 |---|---|
-| Common | 3 |
-| Uncommon | 4 |
-| Rare | 5 |
+| Common | 2 |
+| Uncommon | 3 |
+| Rare | 4 |
 
-With three taps you can just barely clear a Common on perfect timing. Uncommon and Rare *require* crystals or a low-HP bonus — resources and tactics both matter.
+A Common needs 2 of 3 taps — forgiving. Rare needs 4, which exceeds what taps alone can give, so it *requires* a crystal, a weakened target, or banked Trust from a previous attempt. Rarity is expressed through resources and preparation, never through demanding better reflexes.
 
 7. **Resolve.**
    - **Trust met** → it joins your team. Dex entry unlocked.
-   - **Trust short** → it flees, but the shortfall is remembered. Your next encounter with *that species* starts with **+1 banked Trust** (caps at +2). Two failures make the third attempt substantially easier.
-   - **Knocked out instead of tamed** → no monster, no banked Trust. This is the real cost of being careless, and it's the tension that makes the 50%-to-25% HP window interesting.
+   - **Trust short** → you **stay in the fight** with your Trust banked, and can weaken it further and try again. But each failure risks it bolting (**28%**, rising **22%** per subsequent failure), which caps retries at two or three.
+   - **Knocked out instead of tamed** → no monster, no banked Trust. This is the real cost of being careless.
 
 ### Why this shape
 
-The player is always choosing between "hit it once more to reach the +1 low-HP bonus" and "attune now before I knock it out." That's a genuine decision every single encounter, and it costs nothing to learn.
+Failure had to stop ending the encounter — losing a creature outright to three mistimed taps is the worst feel-bad in the loop. But simply removing that penalty made taming a formality: simulation showed **12 tames from 12 encounters**, because retrying with banked Trust eventually always works. The creature's finite patience restores the stakes without ever wasting progress you earned.
+
+The live decision is still the good one: "hit it once more to reach the +1 low-HP bonus" versus "attune now before I knock it out." That costs nothing to learn and recurs every encounter.
 
 ---
 
@@ -320,6 +326,23 @@ Fight length is now flat across the whole level curve — proportional stat grow
 **One knob still worth a look:** type advantage currently wins **89.9%** of fights (neutral 48.9%, disadvantage 10.3%). That is decisive to the point of nearly settling a fight at team-select. Readable for a young player, but if it feels deterministic in testing, narrowing the multipliers from 1.5/0.75 toward 1.35/0.8 is the lever.
 
 Reproduce any of this with `node simulate.js` in `prototype/`.
+
+### Difficulty is separate from balance
+
+Playtesting exposed a gap the balance harness could not see. `simulate.js` measures **equal-level 1v1 with both sides played optimally** — the right test for whether the *game* is fair, and the wrong test for whether a *player* is having a good time. A real player carries damage between fights, starts with one creature rather than three, and faces an AI that never misplays.
+
+Four player-facing adjustments close that gap. None of them touch the symmetric balance above:
+
+| Knob | Value | Why |
+|---|---|---|
+| **Wild AI accuracy** | 50% | Wild creatures aren't tacticians. They play their best move half the time and pick at random otherwise. An opponent that never misplays is the single largest reason a fight feels harder than the numbers predict. |
+| **Incoming damage** | ×0.7 | Damage dealt *to* the player's creatures only. |
+| **Post-battle heal** | 50% of max HP | Restored after every encounter. A loss recalls you to the Lab at full health — losing costs crystals, not time. |
+| **Wild level** | tracks your best | Wild creatures roll at your strongest creature's level, or one below. Previously they rolled 5–7 against a starter permanently stuck at level 5. |
+
+Plus **XP and leveling**, which the prototype was missing entirely — creatures now grow, which was the deepest cause of the difficulty complaint.
+
+These knobs are neutralized inside the balance harnesses (`INCOMING_DAMAGE_MULT: 1, WILD_AI_ACCURACY: 1`), because otherwise they hand a permanent edge to whichever creature occupies the "player" slot and corrupt every matchup number. `playtest.js` is where they're exercised.
 
 **Target: 3–7 turn fights.** Type advantage roughly doubles your damage — decisive but not instant, and slow enough that you can stop at the 50%/25% HP thresholds taming needs.
 

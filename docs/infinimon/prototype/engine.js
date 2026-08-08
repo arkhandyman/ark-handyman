@@ -32,6 +32,26 @@
     FOCUS_MAX: 6,
     FOCUS_REGEN: 1,
 
+    /*
+     * Player-experience knobs. The balance sims measure equal-level 1v1 with
+     * both sides played optimally — which is NOT what a player faces. A real
+     * player carries damage between fights, may be under-levelled, and is up
+     * against an AI that never misplays. These close that gap.
+     */
+    WILD_AI_ACCURACY: 0.5,      // chance a wild picks its best move vs. a random one
+    INCOMING_DAMAGE_MULT: 0.7,  // damage dealt TO the player's monsters
+    POST_BATTLE_HEAL: 0.5,      // fraction of max HP restored after every encounter
+
+    /*
+     * A creature's patience. Letting a failed attunement keep the encounter
+     * alive removed the feel-bad, but with banked Trust it also made taming
+     * eventually guaranteed — 12 tames from 12 encounters, no stakes at all.
+     * Each failure now risks it bolting, which caps retries at two or three
+     * without ever wasting the Trust you earned.
+     */
+    FLEE_BASE: 0.28,            // flee chance after the first failed attempt
+    FLEE_STEP: 0.22,            // added per subsequent failure
+
     // SPD used to decide turn order and nothing else, which made it nearly
     // worthless — balance.js measured r = 0.987 between HP x (DEF+C) x ATK and
     // win rate, with fast monsters at the bottom. These give SPD real value.
@@ -174,7 +194,14 @@
 
   const speciesById = (id) => SPECIES.find((s) => s.id === id);
 
-  const TRUST_REQUIRED = { common: 3, uncommon: 4, rare: 5 };
+  /*
+   * Trust thresholds. Originally 3/4/5 against a maximum of 3 taps, which meant
+   * even a Common demanded a perfect run and anything rarer was gated behind
+   * consumables. Playtesting confirmed this read as punishing. Lowered so a
+   * Common needs 2 of 3 taps and the rarer tiers are reachable without a
+   * flawless performance.
+   */
+  const TRUST_REQUIRED = { common: 2, uncommon: 3, rare: 4 };
   const SPAWN_WEIGHT = { common: 10, uncommon: 4, rare: 1 };
 
   // ---------------------------------------------------------------------------
@@ -271,6 +298,7 @@
       rareBloom,
       bred,
       bond,
+      xp: 0,
       status: null,
       statusTurns: 0,
       moves: movesFor(els),
@@ -281,6 +309,42 @@
     m.def = statAt(b.def, level, mult);
     m.spd = statAt(b.spd, level, mult);
     return m;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Leveling (§7)
+  // ---------------------------------------------------------------------------
+
+  const xpToNext = (level) => Math.round(15 * Math.pow(level, 1.5));
+
+  function recomputeStats(m) {
+    const mult = m.rareBloom ? RARE_BLOOM_MULT : 1;
+    const frac = m.maxHp ? m.hp / m.maxHp : 1;
+    m.maxHp = statAt(m.bases.hp, m.level, mult);
+    m.atk = statAt(m.bases.atk, m.level, mult);
+    m.def = statAt(m.bases.def, m.level, mult);
+    m.spd = statAt(m.bases.spd, m.level, mult);
+    m.hp = Math.max(1, Math.round(m.maxHp * frac)); // keep the same HP fraction
+  }
+
+  /** Award XP, leveling up as many times as the amount covers. */
+  function grantXp(m, amount) {
+    if (m.level >= MAX_LEVEL) return { levels: 0 };
+    m.xp = (m.xp || 0) + amount;
+    let levels = 0;
+    while (m.level < MAX_LEVEL && m.xp >= xpToNext(m.level)) {
+      m.xp -= xpToNext(m.level);
+      m.level += 1;
+      levels += 1;
+    }
+    if (levels) recomputeStats(m);
+    return { levels };
+  }
+
+  /** XP for beating a wild, scaled by the level gap — punching up pays better. */
+  function xpForWin(winnerLevel, loserLevel) {
+    const gap = loserLevel - winnerLevel;
+    return Math.max(12, Math.round((18 + loserLevel * 4) * (1 + gap * 0.15)));
   }
 
   const effectiveSpd = (m) =>
@@ -350,6 +414,20 @@
     return best;
   }
 
+  /**
+   * Wild creatures are not tacticians. They play the optimal move only
+   * WILD_AI_ACCURACY of the time and otherwise pick at random from what they can
+   * afford. An opponent that never misplays is the single biggest reason a
+   * fight feels harder than the balance numbers suggest.
+   */
+  function chooseWildMove(attacker, defender, focus, rng) {
+    const options = affordable(attacker, focus);
+    if (!rng || rng() < CONFIG.WILD_AI_ACCURACY) {
+      return chooseMove(attacker, defender, focus);
+    }
+    return options[Math.floor(rng() * options.length)];
+  }
+
   function applyStatusTick(m, b) {
     if (!m.status) return;
     const s = STATUSES[m.status];
@@ -376,8 +454,10 @@
     return Math.min(CONFIG.GLANCE_CAP, lead / CONFIG.GLANCE_DIVISOR);
   }
 
-  function strike(attacker, defender, move, b) {
+  function strike(attacker, defender, move, b, damageMult) {
     let { amount, multiplier } = damage(attacker, defender, move, b.rng);
+
+    if (damageMult && damageMult !== 1) amount = Math.max(1, Math.round(amount * damageMult));
 
     const glanced = b.rng() < glanceChance(attacker, defender);
     if (glanced) amount = Math.max(1, Math.round(amount * CONFIG.GLANCE_DAMAGE));
@@ -406,7 +486,7 @@
     const wild = b.wild;
 
     if (playerMove) b.playerFocus -= playerMove.focus;
-    const wildMove = chooseMove(wild, player, b.wildFocus);
+    const wildMove = chooseWildMove(wild, player, b.wildFocus, b.rng);
     b.wildFocus -= wildMove.focus;
 
     // Turn order by SPD; ties resolve on a visible coin flip (§5).
@@ -425,7 +505,8 @@
 
     for (const [atk, def, mv] of order) {
       if (b.over || atk.hp <= 0 || !mv) continue;
-      strike(atk, def, mv, b);
+      // The player's monsters take reduced damage — see CONFIG.
+      strike(atk, def, mv, b, atk === wild ? CONFIG.INCOMING_DAMAGE_MULT : 1);
       b.wildLowWater = Math.min(b.wildLowWater, wild.hp / wild.maxHp);
       if (def.hp <= 0) {
         b.log.push(`${def.name} fainted.`);
@@ -475,14 +556,59 @@
 
   const canAttune = (wild) => wild.hp > 0 && wild.hp / wild.maxHp < 0.5;
 
+  /*
+   * Attunement difficulty.
+   *
+   * The first version swept a needle continuously AND repositioned the target
+   * zone between every tap, demanding three hits under time pressure. That is
+   * two difficulty sources stacked, and playtesting found it simply too hard.
+   *
+   * The zone now stays put for the whole attempt, starts far wider, and grows
+   * as the creature calms — while the needle slows down with each tap landed.
+   * Both curves run in the player's favour, and both are thematic: the creature
+   * is settling, so it gets easier to read.
+   */
+  const ATTUNE = {
+    BASE_ZONE: 34,        // percent of the track, up from 21
+    CRYSTAL_ZONE_BONUS: 12,
+    LOW_HP_ZONE_BONUS: 10, // a hurt creature is calmer and easier to read
+    PER_TAP_ZONE_BONUS: 6, // each landed tap settles it further
+    BASE_SPEED: 0.62,      // down from 0.90
+    PER_TAP_SLOWDOWN: 0.16,
+    RARITY_SPEED: { common: 0, uncommon: 0.12, rare: 0.24 },
+  };
+
+  /** Width of the green zone, as a percentage of the track. */
+  function attuneZoneWidth(wild, { crystalMatch, tapsLanded = 0 }) {
+    let w = ATTUNE.BASE_ZONE;
+    if (crystalMatch) w += ATTUNE.CRYSTAL_ZONE_BONUS;
+    if (wild.hp / wild.maxHp < 0.25) w += ATTUNE.LOW_HP_ZONE_BONUS;
+    w += tapsLanded * ATTUNE.PER_TAP_ZONE_BONUS;
+    return Math.min(72, w);
+  }
+
+  /** Needle sweep speed — slows as the creature settles. */
+  function attuneSpeed(wild, tapsLanded = 0) {
+    const base = ATTUNE.BASE_SPEED + (ATTUNE.RARITY_SPEED[wild.rarity] || 0);
+    return Math.max(0.25, base - tapsLanded * ATTUNE.PER_TAP_SLOWDOWN);
+  }
+
+  /**
+   * Chance the creature bolts after a failed attunement. `fails` counts the
+   * failures so far in THIS encounter, including the one just scored.
+   */
+  function fleeChanceAfterFailure(fails) {
+    return Math.min(0.9, CONFIG.FLEE_BASE + (fails - 1) * CONFIG.FLEE_STEP);
+  }
+
   /**
    * Score an attunement attempt.
    *   taps          — number of taps that landed in the green zone (0-3)
    *   crystalMatch  — a matching-element Resonance Crystal was offered
-   *   banked        — Trust carried from previous failed attempts (caps at 2)
+   *   banked        — Trust carried from previous failed attempts (caps at 3)
    */
   function attune(wild, { taps, crystalMatch, banked = 0 }) {
-    const required = TRUST_REQUIRED[wild.rarity] || 3;
+    const required = TRUST_REQUIRED[wild.rarity] || 2;
     let trust = taps;
     if (crystalMatch) trust += 1;
     if (wild.hp / wild.maxHp < 0.25) trust += 1;
@@ -493,8 +619,9 @@
       success,
       trust,
       required,
-      // A failure banks progress so the next encounter is easier (§4).
-      newBanked: success ? 0 : Math.min(2, banked + 1),
+      // Failure banks progress. This now accrues WITHIN a single encounter as
+      // well as across encounters, so retrying in the same fight gets easier.
+      newBanked: success ? 0 : Math.min(3, banked + 1),
     };
   }
 
@@ -589,8 +716,11 @@
     makeRng, speciesById, typeMultiplier, defenseMultiplier, oppositeElement,
     hybridName, hybridKey, statAt, movesFor,
     // core
-    createMonster, damage, expectedDamage, chooseMove, effectiveSpd,
+    createMonster, damage, expectedDamage, chooseMove, chooseWildMove, effectiveSpd,
     createBattle, resolveTurn, activeMonster, affordable,
-    canAttune, attune, breed, randomWild,
+    canAttune, attune, attuneZoneWidth, attuneSpeed, fleeChanceAfterFailure, ATTUNE,
+    breed, randomWild,
+    // progression
+    xpToNext, grantXp, xpForWin, recomputeStats,
   };
 });

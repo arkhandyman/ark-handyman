@@ -20,6 +20,14 @@
 
 const G = require('./engine.js');
 
+/*
+ * Balance harnesses measure the SYMMETRIC game. The player-experience knobs
+ * (reduced incoming damage, fallible wild AI) would otherwise hand a permanent
+ * edge to whichever monster occupies the "player" slot and corrupt every
+ * matchup number here. playtest.js is where those knobs are exercised.
+ */
+G.configure({ INCOMING_DAMAGE_MULT: 1, WILD_AI_ACCURACY: 1 });
+
 const ITERATIONS = 30;
 const RUNS = 20;      // per pairing, per iteration
 const LEVEL = 15;
