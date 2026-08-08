@@ -83,6 +83,10 @@
   }
 
   const MAX_LEVEL = 25;
+  // Two defensive creatures can heal and guard past each other's damage. The cap
+  // turns that stalemate into the wild losing interest rather than a 200-turn
+  // fight — measured at 201 turns before this existed.
+  const MAX_BATTLE_TURNS = 40;
   const BOND_BONUS_THRESHOLD = 60;
   const BOND_BONUS = 1.05;
   const RARE_BLOOM_CHANCE = 0.05;
@@ -415,14 +419,70 @@
     };
   }
 
-  function movesFor(elements) {
+  /*
+   * Signature moves — one per body archetype.
+   *
+   * Every creature of an element used to share an identical move set, so a fire
+   * fox and a fire badger fought exactly the same way. The signature move is
+   * what a creature does BECAUSE OF WHAT IT IS: a tortoise turtles up, a fox
+   * strikes first, a badger swings hard and eats the recoil.
+   *
+   * Effects are deliberately few — five verbs, reused across eighteen creatures.
+   * Names are placeholders; see naming.md.
+   */
+  const SIGNATURES = {
+    tortoise: { name: 'Shell Up',     power: 0,  focus: 1, effect: 'guard',    amount: 0.69, turns: 3 },
+    crab:     { name: 'Claw Wall',    power: 29, focus: 1, effect: 'guard',    amount: 0.48, turns: 3 },
+    beetle:   { name: 'Plate Down',   power: 0,  focus: 1, effect: 'guard',    amount: 0.62, turns: 3 },
+    blob:     { name: 'Settle',       power: 0,  focus: 2, effect: 'heal',     amount: 0.16 },
+    sapling:  { name: 'Take Root',    power: 0,  focus: 2, effect: 'heal',     amount: 0.20 },
+
+    badger:   { name: 'Dig In',       power: 0,  focus: 1, effect: 'rally',    amount: 0.54, turns: 3 },
+    ram:      { name: 'Lower Horns',  power: 0,  focus: 1, effect: 'rally',    amount: 0.61, turns: 3 },
+    lizard:   { name: 'Sun Bask',     power: 0,  focus: 1, effect: 'rally',    amount: 0.48, turns: 4 },
+
+    fox:      { name: 'Feint',        power: 30, focus: 1, effect: 'quick' },
+    weasel:   { name: 'Dart',         power: 28, focus: 1, effect: 'quick' },
+    rodent:   { name: 'Scurry Strike',power: 26, focus: 1, effect: 'quick' },
+    serpent:  { name: 'Snap',         power: 32, focus: 1, effect: 'quick' },
+
+    moth:     { name: 'Dust Drain',   power: 34, focus: 2, effect: 'drain',    amount: 0.41 },
+    otter:    { name: 'Skim',         power: 36, focus: 2, effect: 'drain',    amount: 0.35 },
+    manta:    { name: 'Glide By',     power: 32, focus: 2, effect: 'drain',    amount: 0.41 },
+
+    owl:      { name: 'Silent Swoop', power: 17, focus: 1, effect: 'slow',     amount: 0.18, turns: 3 },
+    deer:     { name: 'Bound',        power: 16, focus: 1, effect: 'slow',     amount: 0.15, turns: 3 },
+    bird:     { name: 'Downdraft',    power: 16, focus: 1, effect: 'slow',     amount: 0.18, turns: 3 },
+  };
+
+  /** Short human-readable description of a move's effect, for the battle UI. */
+  function moveEffectText(mv) {
+    if (!mv.effect) return '';
+    const pct = Math.round((mv.amount || 0) * 100);
+    switch (mv.effect) {
+      case 'guard': return `+${pct}% DEF`;
+      case 'rally': return `+${pct}% ATK`;
+      case 'heal':  return `heal ${pct}%`;
+      case 'drain': return `heals you`;
+      case 'quick': return 'always first';
+      case 'slow':  return `-${pct}% their SPD`;
+      default: return '';
+    }
+  }
+
+  function movesFor(elements, archetype) {
     const primary = elements[0];
     const secondary = elements[1] || oppositeElement(primary);
+    const sig = archetype && SIGNATURES[archetype];
+
+    // Basic, Strong, and a coverage move stay constant; the fourth slot is the
+    // creature's own. Bred creatures with no archetype keep the old coverage
+    // move so nothing breaks.
     return [
       makeMove(primary, 'basic'),
-      makeMove(primary, 'standard'),
+      sig ? { ...sig, element: primary, tier: 'signature' } : makeMove(primary, 'standard'),
       makeMove(primary, 'strong'),
-      makeMove(secondary, 'standard'), // coverage
+      makeMove(secondary, 'standard'),
     ];
   }
 
@@ -445,6 +505,7 @@
 
     const sp = speciesId ? speciesById(speciesId) : null;
     const els = elements || [sp.element];
+    const arche = opts.archetype || (sp ? sp.archetype : null);
     const b = bases || { hp: sp.hp, atk: sp.atk, def: sp.def, spd: sp.spd };
     const mult = rareBloom ? RARE_BLOOM_MULT : 1;
 
@@ -461,9 +522,11 @@
       bred,
       bond,
       xp: 0,
+      archetype: arche,
       status: null,
       statusTurns: 0,
-      moves: movesFor(els),
+      buffs: {},          // { atk|def|spd: { mult, turns } }
+      moves: movesFor(els, arche),
     };
     m.maxHp = statAt(b.hp, level, mult);
     m.hp = m.maxHp;
@@ -509,8 +572,32 @@
     return Math.max(12, Math.round((18 + loserLevel * 4) * (1 + gap * 0.15)));
   }
 
-  const effectiveSpd = (m) =>
-    m.status === 'drenched' ? Math.round(m.spd * STATUSES.drenched.spdMult) : m.spd;
+  const buffMult = (m, key) => (m.buffs && m.buffs[key] ? m.buffs[key].mult : 1);
+
+  const effectiveAtk = (m) => Math.round(m.atk * buffMult(m, 'atk'));
+  const effectiveDef = (m) => Math.round(m.def * buffMult(m, 'def'));
+
+  const effectiveSpd = (m) => {
+    let v = m.spd * buffMult(m, 'spd');
+    if (m.status === 'drenched') v *= STATUSES.drenched.spdMult;
+    return Math.round(v);
+  };
+
+  /** Count down every active buff, clearing the ones that expire. */
+  function tickBuffs(m) {
+    if (!m.buffs) return;
+    for (const key of Object.keys(m.buffs)) {
+      m.buffs[key].turns -= 1;
+      if (m.buffs[key].turns <= 0) delete m.buffs[key];
+    }
+  }
+
+  function applyBuff(m, key, mult, turns) {
+    if (!m.buffs) m.buffs = {};
+    const existing = m.buffs[key];
+    // Re-applying refreshes rather than stacking without limit.
+    m.buffs[key] = { mult: Math.max(existing ? existing.mult : 0, mult), turns };
+  }
 
   const bondBonusOf = (m) => (m.bond >= BOND_BONUS_THRESHOLD ? BOND_BONUS : 1.0);
 
@@ -524,7 +611,7 @@
     const variance = opts && opts.noVariance ? 1 : range(rng, 0.9, 1.1);
     const raw =
       move.power *
-      (attacker.atk / (defender.def + CONFIG.DEF_CONSTANT)) *
+      (effectiveAtk(attacker) / (effectiveDef(defender) + CONFIG.DEF_CONSTANT)) *
       levelTerm *
       mult *
       bondBonusOf(attacker) *
@@ -564,13 +651,39 @@
     return monster.moves.filter((mv) => mv.focus <= focus);
   }
 
-  /** Baseline "competent player" AI: highest expected damage it can afford. */
+  /**
+   * How much a non-damaging effect is worth this turn, expressed in damage-
+   * equivalent points so it can be compared against attacking.
+   *
+   * Without this the AI would never pick a 0-power move, so a wild tortoise
+   * would never actually guard and half the signature moves would be invisible
+   * in play.
+   */
+  function effectValue(attacker, defender, mv) {
+    if (!mv.effect) return 0;
+    const hpFrac = attacker.hp / attacker.maxHp;
+    const ref = expectedDamage(attacker, defender, { ...mv, power: 40, effect: null });
+
+    switch (mv.effect) {
+      // Healing is worth a lot when hurt and nothing at full health.
+      case 'heal':  return hpFrac > 0.75 ? 0 : ref * (1 - hpFrac) * 2.2;
+      // Buffs pay off over the turns that follow, so they want to land early.
+      case 'rally': return attacker.buffs && attacker.buffs.atk ? 0 : ref * 0.9;
+      case 'guard': return attacker.buffs && attacker.buffs.def ? 0 : ref * 0.8;
+      case 'slow':  return defender.buffs && defender.buffs.spd ? 0 : ref * 0.35;
+      case 'drain': return ref * 0.3;
+      case 'quick': return ref * 0.2;
+      default: return 0;
+    }
+  }
+
+  /** Baseline "competent player" AI: best total value it can afford. */
   function chooseMove(attacker, defender, focus) {
     const options = affordable(attacker, focus);
     let best = options[0];
-    let bestVal = -1;
+    let bestVal = -Infinity;
     for (const mv of options) {
-      const val = expectedDamage(attacker, defender, mv);
+      const val = expectedDamage(attacker, defender, mv) + effectValue(attacker, defender, mv);
       if (val > bestVal) { bestVal = val; best = mv; }
     }
     return best;
@@ -635,6 +748,36 @@
       defender.statusTurns = STATUSES[move.status].turns;
       b.log.push(`${defender.name} is ${STATUSES[move.status].name}!`);
     }
+
+    // Signature effects — what a creature does because of what it is.
+    switch (move.effect) {
+      case 'guard':
+        applyBuff(attacker, 'def', 1 + move.amount, move.turns);
+        b.log.push(`${attacker.name} braces. Defence up.`);
+        break;
+      case 'rally':
+        applyBuff(attacker, 'atk', 1 + move.amount, move.turns);
+        b.log.push(`${attacker.name} sets itself. Attack up.`);
+        break;
+      case 'heal': {
+        const healed = Math.round(attacker.maxHp * move.amount);
+        attacker.hp = Math.min(attacker.maxHp, attacker.hp + healed);
+        b.log.push(`${attacker.name} recovers ${healed} HP.`);
+        break;
+      }
+      case 'drain': {
+        const drained = Math.max(1, Math.round(amount * move.amount));
+        attacker.hp = Math.min(attacker.maxHp, attacker.hp + drained);
+        b.log.push(`${attacker.name} drains ${drained} HP.`);
+        break;
+      }
+      case 'slow':
+        applyBuff(defender, 'spd', 1 - move.amount, move.turns);
+        b.log.push(`${defender.name} slows down.`);
+        break;
+      default:
+        break;
+    }
     return amount;
   }
 
@@ -651,11 +794,15 @@
     const wildMove = chooseWildMove(wild, player, b.wildFocus, b.rng);
     b.wildFocus -= wildMove.focus;
 
-    // Turn order by SPD; ties resolve on a visible coin flip (§5).
+    // Turn order: a 'quick' move jumps the queue, otherwise SPD decides and
+    // ties resolve on a visible coin flip (§5).
     let playerFirst;
+    const pQuick = playerMove && playerMove.effect === 'quick';
+    const wQuick = wildMove && wildMove.effect === 'quick';
     const ps = effectiveSpd(player);
     const ws = effectiveSpd(wild);
-    if (ps !== ws) playerFirst = ps > ws;
+    if (pQuick !== wQuick) playerFirst = pQuick;
+    else if (ps !== ws) playerFirst = ps > ws;
     else {
       playerFirst = b.rng() < 0.5;
       b.log.push(`Speed tie — coin flip: ${playerFirst ? 'you' : wild.name} go first.`);
@@ -680,9 +827,16 @@
     if (!b.over) {
       applyStatusTick(player, b);
       applyStatusTick(wild, b);
+      tickBuffs(player);
+      tickBuffs(wild);
       b.wildLowWater = Math.min(b.wildLowWater, wild.hp / wild.maxHp);
       if (wild.hp <= 0) finish(b, 'wild_fainted');
       else if (activeMonster(b).hp <= 0 && !switchToNextAlive(b)) finish(b, 'player_wiped');
+    }
+
+    if (!b.over && b.turn >= MAX_BATTLE_TURNS) {
+      b.log.push(`${wild.name} loses interest and slips away.`);
+      finish(b, 'stalemate');
     }
 
     if (!b.over) {
@@ -899,6 +1053,11 @@
 
     let kind, elements, bases, name, look = null, personality = null;
     let speciesId = null, profile = null, hybrid = null;
+    // Offspring inherit a body archetype, which is what gives them a signature
+    // move. Deterministic so the same pairing always behaves the same way.
+    let archetype = [a, b].filter((p) => p.archetype)
+      .sort((x, y) => String(x.speciesId).localeCompare(String(y.speciesId)))
+      .map((p) => p.archetype)[0] || null;
 
     if (sameElement) {
       elements = [elsA[0]];
@@ -945,7 +1104,7 @@
     }
 
     const child = createMonster({
-      speciesId, elements, bases, name,
+      speciesId, elements, bases, name, archetype,
       level: 5,
       bond: 50,       // bred creatures start bonded (§7)
       rareBloom,
@@ -1091,7 +1250,7 @@
 
   return {
     // config
-    CONFIG, configure, MAX_LEVEL, TIERS, TRUST_REQUIRED,
+    CONFIG, configure, MAX_LEVEL, MAX_BATTLE_TURNS, TIERS, TRUST_REQUIRED,
     RARE_BLOOM_CHANCE, STATUSES,
     // data
     ELEMENT_CYCLE, ELEMENTS, SPECIES, HYBRID_NAMES, HYBRID_PROFILES,
@@ -1101,7 +1260,8 @@
     makeRng, speciesById, typeMultiplier, defenseMultiplier, oppositeElement,
     hybridName, hybridKey, orderElements, statAt, movesFor, powerOf, fitToPower,
     // core
-    createMonster, damage, expectedDamage, chooseMove, chooseWildMove, effectiveSpd,
+    createMonster, damage, expectedDamage, chooseMove, chooseWildMove, effectValue,
+    effectiveSpd, effectiveAtk, effectiveDef, SIGNATURES, moveEffectText,
     createBattle, resolveTurn, activeMonster, affordable,
     canAttune, attune, attuneZoneWidth, attuneSpeed, fleeChanceAfterFailure, ATTUNE,
     breed, feedEgg, eggReady, randomWild,

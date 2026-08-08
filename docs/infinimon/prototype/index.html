@@ -151,12 +151,15 @@ function packMonster(m) {
     s: m.speciesId, n: m.name, e: m.elements, b: m.bases,
     lv: m.level, xp: m.xp || 0, bo: m.bond, hp: m.hp,
     rb: !!m.rareBloom, br: !!m.bred,
+    // Bred creatures have no species to derive an archetype from, so without
+    // this they would lose their signature move on reload.
+    ar: m.archetype || null,
   };
 }
 
 function unpackMonster(d) {
   const m = G.createMonster({
-    speciesId: d.s, elements: d.e, bases: d.b, name: d.n,
+    speciesId: d.s, elements: d.e, bases: d.b, name: d.n, archetype: d.ar,
     level: d.lv, bond: d.bo, rareBloom: d.rb, bred: d.br,
   });
   m.xp = d.xp;
@@ -238,6 +241,16 @@ function monRow(m, extra) {
       ${extra || ''}
     </div>
   </div>`;
+}
+
+function buffChips(m) {
+  const out = [];
+  if (m.buffs && m.buffs.atk) out.push('ATK up');
+  if (m.buffs && m.buffs.def) out.push('DEF up');
+  if (m.buffs && m.buffs.spd && m.buffs.spd.mult < 1) out.push('slowed');
+  if (m.status) out.push(G.STATUSES[m.status].name);
+  return out.length
+    ? `<div class="meta" style="margin-top:4px;color:var(--gold)">${out.join(' &middot; ')}</div>` : '';
 }
 
 function hpBar(m) {
@@ -348,14 +361,14 @@ VIEWS.battle = () => {
   <div class="sub">${esc(w.elementLabel)} &middot; ${w.rarity} &middot; needs ${req} Trust</div>
 
   <div class="card">
-    ${monRow(w)}${hpBar(w)}
+    ${monRow(w)}${hpBar(w)}${buffChips(w)}
     <div class="meta" style="margin-top:6px">${Math.round((w.hp / w.maxHp) * 100)}% HP
       ${canTame ? '&middot; <span style="color:var(--good)">Attune available</span>'
                 : '&middot; weaken below 50% to attune'}</div>
   </div>
 
   <div class="card">
-    ${monRow(p)}${hpBar(p)}${focusPips(b.playerFocus)}
+    ${monRow(p)}${hpBar(p)}${buffChips(p)}${focusPips(b.playerFocus)}
   </div>
 
   <div class="card">
@@ -367,11 +380,13 @@ VIEWS.battle = () => {
         const mult = G.defenseMultiplier(mv.element, w.elements);
         const tag = mult > 1.05 ? '<span style="color:var(--good)">&#9650;</span>'
                   : mult < 0.95 ? '<span style="color:var(--bad)">&#9660;</span>' : '';
+        const fx = G.moveEffectText(mv);
         return `<button data-act="move" data-i="${i}" ${afford ? '' : 'disabled'}>
           <div class="mv"><span style="color:${el(mv.element).color}">&#9670;</span>
           <span style="flex:1">${mv.name}</span></div>
-          <div class="mv"><span class="pw">~${dmg} dmg ${tag}</span>
+          <div class="mv"><span class="pw">${mv.power > 0 ? '~' + dmg + ' dmg ' + tag : ''}</span>
           <span class="cost">${mv.focus > 0 ? mv.focus + ' focus' : 'free'}</span></div>
+          ${fx ? `<div class="mv"><span class="pw" style="color:var(--good)">${fx}</span></div>` : ''}
         </button>`;
       }).join('')}
     </div>
