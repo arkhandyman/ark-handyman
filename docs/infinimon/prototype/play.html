@@ -164,6 +164,23 @@
     FLEE_BASE: 0.28,            // flee chance after the first failed attempt
     FLEE_STEP: 0.22,            // added per subsequent failure
 
+    /*
+     * How much a point of SPD is worth in the power score.
+     *
+     * The score originally read HP x (DEF + C) x ATK and ignored SPD entirely —
+     * correct when SPD only set turn order, and wrong once glancing blows and
+     * Focus surge gave it teeth. Fitting hybrids against the SPD-blind formula
+     * handed fast lines a full HP/ATK/DEF budget PLUS free speed, producing a
+     * 71.9-point win-rate spread that tracked SPD almost perfectly.
+     *
+     * Swept empirically by `node hybrids.js sweep`.
+     */
+    SPD_POWER_WEIGHT: 0.010,
+    SPD_POWER_PIVOT: 35,        // SPD considered "average", worth no adjustment
+
+    // Scales type advantage toward neutral. 1 = the design's 1.5/0.75.
+    TYPE_SCALE: 1.0,
+
     // SPD used to decide turn order and nothing else, which made it nearly
     // worthless — balance.js measured r = 0.987 between HP x (DEF+C) x ATK and
     // win rate, with fast monsters at the bottom. These give SPD real value.
@@ -224,15 +241,24 @@
   const NEUTRAL = 1.0;
   const WEAK = 0.75;
 
-  /** Multiplier for a single attacking element into a single defending element. */
+  /**
+   * Multiplier for a single attacking element into a single defending element.
+   *
+   * CONFIG.TYPE_SCALE interpolates toward neutral: 1 gives the design's
+   * 1.5 / 1.0 / 0.75, 0.7 gives 1.35 / 1.0 / 0.825, and 0 flattens the grid
+   * entirely. This is the lever for the open question of whether type advantage
+   * is too decisive, and it doubles as a diagnostic — running a round robin at
+   * 0 isolates how much of a win-rate spread is stat lines versus matchups.
+   */
   function typeMultiplier(attackEl, defendEl) {
     const i = ELEMENT_CYCLE.indexOf(attackEl);
     const j = ELEMENT_CYCLE.indexOf(defendEl);
     if (i < 0 || j < 0) return NEUTRAL;
     const delta = (j - i + 6) % 6;
-    if (delta === 1 || delta === 2) return STRONG; // beats the next two
-    if (delta === 4 || delta === 5) return WEAK;   // loses to the previous two
-    return NEUTRAL;                                // self, and the opposite
+    let raw = NEUTRAL;
+    if (delta === 1 || delta === 2) raw = STRONG;      // beats the next two
+    else if (delta === 4 || delta === 5) raw = WEAK;   // loses to the previous two
+    return 1 + (raw - 1) * CONFIG.TYPE_SCALE;
   }
 
   /**
@@ -274,6 +300,83 @@
 
   const hybridKey = (a, b) => [a, b].sort().join('|');
   const hybridName = (a, b) => HYBRID_NAMES[hybridKey(a, b)] || null;
+
+  /**
+   * Canonical element order for a hybrid: primary is whichever comes first in
+   * the cycle. Without this the same pairing yields a different primary element
+   * depending on which parent was selected first — same species name, different
+   * move set. Species must be deterministic.
+   */
+  function orderElements(a, b) {
+    const ia = ELEMENT_CYCLE.indexOf(a);
+    const ib = ELEMENT_CYCLE.indexOf(b);
+    return ia <= ib ? [a, b] : [b, a];
+  }
+
+  // ---------------------------------------------------------------------------
+  // Hybrid species identity (§6)
+  //
+  // Averaging two parents produces a creature with no character of its own — a
+  // Steam looked and played like "the mean of a Wickle and a Puddlup". Each
+  // hybrid element now carries a stat BIAS, so every Steam is recognizably
+  // steam-like (fast, vaporous, fragile) regardless of which Ember and which
+  // Tide made it, while parent stats still drive individual variation.
+  //
+  // The bias REDISTRIBUTES rather than adds. After applying it, HP/ATK/DEF are
+  // rescaled so the line's power score matches its target — otherwise a bias
+  // toward HP and DEF would simply make that hybrid stronger, which is the exact
+  // trap the 180-point stat budget fell into (see §7).
+  //
+  // Names are placeholders. See naming.md.
+  // ---------------------------------------------------------------------------
+
+  const HYBRID_PROFILES = {
+    Current:   { name: 'Voltfin',    powerMult: 1.04, bias: { hp: 0.90, atk: 1.14, def: 0.86, spd: 1.20 },
+                 personality: 'Restless, never settles in one place',
+                 look: 'Eel-bodied, fins trailing arcs of charge through water' },
+    Plasma:    { name: 'Arcflare',   powerMult: 0.97, bias: { hp: 0.82, atk: 1.34, def: 0.74, spd: 1.16 },
+                 personality: 'Volatile, burns bright and brief',
+                 look: 'A barely-contained silhouette of white-hot gas' },
+    Lumen:     { name: 'Glimmoss',   powerMult: 0.93, bias: { hp: 1.16, atk: 0.84, def: 1.14, spd: 0.92 },
+                 personality: 'Gentle, glows brighter around people it trusts',
+                 look: 'Soft mossy shell lit from within, bioluminescent spots' },
+    Magnet:    { name: 'Lodefang',   powerMult: 0.98, bias: { hp: 1.10, atk: 0.96, def: 1.30, spd: 0.70 },
+                 personality: 'Immovable, collects metal debris on its hide',
+                 look: 'Ore-plated quadruped, iron filings bristling along its back' },
+    Storm:     { name: 'Squallwing', powerMult: 0.88, bias: { hp: 0.86, atk: 1.20, def: 0.82, spd: 1.32 },
+                 personality: 'Dramatic, arrives before you hear it',
+                 look: 'Broad stormcloud wings, lightning threading the feathers' },
+    Steam:     { name: 'Kettlepup',  powerMult: 1.09, bias: { hp: 0.94, atk: 1.06, def: 0.86, spd: 1.26 },
+                 personality: 'Excitable, whistles when it is happy',
+                 look: 'Round pup wreathed in vapour, ears venting little jets' },
+    Marsh:     { name: 'Bogbloom',   powerMult: 1.05, bias: { hp: 1.28, atk: 0.94, def: 1.14, spd: 0.70 },
+                 personality: 'Patient to the point of seeming asleep',
+                 look: 'Low wide amphibian, reed flowers growing from its back' },
+    Clay:      { name: 'Siltshell',  powerMult: 1.00, bias: { hp: 1.18, atk: 0.88, def: 1.26, spd: 0.76 },
+                 personality: 'Steady, reshapes itself when it is nervous',
+                 look: 'Wet clay carapace, cracked and re-smoothed over and over' },
+    Mist:      { name: 'Hazewisp',   powerMult: 0.84, bias: { hp: 0.86, atk: 0.88, def: 1.02, spd: 1.36 },
+                 personality: 'Elusive, is rarely where you last looked',
+                 look: 'Half-there drifting form with faint eyes and no edges' },
+    Ash:       { name: 'Sootleaf',   powerMult: 1.19, bias: { hp: 1.14, atk: 1.10, def: 0.96, spd: 0.84 },
+                 personality: 'Smoulders quietly, holds a grudge',
+                 look: 'Charred leaf-plated creature trailing warm grey flakes' },
+    Magma:     { name: 'Cragmelt',   powerMult: 1.10, bias: { hp: 1.16, atk: 1.30, def: 1.02, spd: 0.62 },
+                 personality: 'Slow, heavy, and absolutely certain',
+                 look: 'Stone shell split by molten seams that brighten when angry' },
+    Cinder:    { name: 'Emberkite',  powerMult: 0.89, bias: { hp: 0.84, atk: 1.22, def: 0.80, spd: 1.28 },
+                 personality: 'Playful, leaves scorch marks everywhere',
+                 look: 'Paper-thin glider trailing a wake of live sparks' },
+    Grove:     { name: 'Barkroot',   powerMult: 1.15, bias: { hp: 1.34, atk: 0.92, def: 1.28, spd: 0.60 },
+                 personality: 'Ancient-feeling even when young',
+                 look: 'Deep-rooted bark body, stone caught up in the root mass' },
+    Spore:     { name: 'Puffcap',    powerMult: 0.89, bias: { hp: 1.12, atk: 0.84, def: 0.98, spd: 1.22 },
+                 personality: 'Drifts wherever the wind decides',
+                 look: 'Cap-headed drifter shedding a slow trail of spores' },
+    Dust:      { name: 'Grithare',   powerMult: 0.96, bias: { hp: 0.94, atk: 0.96, def: 1.14, spd: 1.20 },
+                 personality: 'Skittish, kicks up cover and vanishes into it',
+                 look: 'Long-eared runner wrapped in a haze of grit' },
+  };
 
   // ---------------------------------------------------------------------------
   // Base roster (§3) — every base monster totals exactly 180
@@ -743,6 +846,58 @@
 
   const STAT_KEYS = ['hp', 'atk', 'def', 'spd'];
 
+  /**
+   * Damage a line can deal before it dies — the yardstick from §7, now with a
+   * SPD term. Survivability is HP x (DEF + C); output is ATK; and SPD multiplies
+   * both through glancing blows and Focus surge (§5).
+   */
+  function powerOf(bases) {
+    const spdFactor = Math.max(0.4,
+      1 + ((bases.spd || CONFIG.SPD_POWER_PIVOT) - CONFIG.SPD_POWER_PIVOT) * CONFIG.SPD_POWER_WEIGHT);
+    return bases.hp * (bases.def + CONFIG.DEF_CONSTANT) * bases.atk * spdFactor;
+  }
+
+  /**
+   * Apply a hybrid's stat bias, then rescale HP/ATK/DEF so the line hits
+   * `targetPower`. SPD is exempt from the rescale — it is the character axis,
+   * and letting it ride free is what lets a Hazewisp be genuinely fast rather
+   * than merely fast-for-its-budget.
+   *
+   * Solved by bisection because power is cubic-ish in the scale factor.
+   */
+  function fitToPower(bases, bias, targetPower) {
+    const biased = {
+      hp: bases.hp * bias.hp,
+      atk: bases.atk * bias.atk,
+      def: bases.def * bias.def,
+      spd: bases.spd * bias.spd,
+    };
+
+    // The fit must account for the hybrid's own SPD, so a fast line is granted
+    // correspondingly less HP/ATK/DEF rather than getting speed for free.
+    let lo = 0.25, hi = 4.0;
+    for (let i = 0; i < 40; i++) {
+      const f = (lo + hi) / 2;
+      const p = powerOf({
+        hp: biased.hp * f, atk: biased.atk * f, def: biased.def * f, spd: biased.spd,
+      });
+      if (p < targetPower) lo = f; else hi = f;
+    }
+    const f = (lo + hi) / 2;
+
+    return {
+      hp: Math.max(15, Math.round(biased.hp * f)),
+      atk: Math.max(15, Math.round(biased.atk * f)),
+      def: Math.max(15, Math.round(biased.def * f)),
+      spd: Math.max(10, Math.round(biased.spd)),
+    };
+  }
+
+  // Breeding should be worth doing. Offspring target this multiple of the
+  // parents' average power.
+  const HYBRID_POWER_BONUS = 1.10;
+  const REFINED_POWER_BONUS = 1.06;
+
   function breed(a, b, rng) {
     const elsA = a.elements;
     const elsB = b.elements;
@@ -753,34 +908,40 @@
     }
 
     const sameElement = elsA[0] === elsB[0];
-    const elements = sameElement ? [elsA[0]] : [elsA[0], elsB[0]];
+    const elements = sameElement ? [elsA[0]] : orderElements(elsA[0], elsB[0]);
 
-    const bases = {};
+    // Inherited line: average the parents, with a chance at the better value.
+    // This is what makes two Steams from different parents differ.
+    const inherited = {};
     for (const key of STAT_KEYS) {
       const av = a.bases[key];
       const bv = b.bases[key];
-      let value;
-      if (rng() < 0.25) {
-        value = Math.max(av, bv);       // 25% chance to inherit the better parent
-      } else {
-        value = (av + bv) / 2;          // otherwise average
-      }
-      if (sameElement) {
-        // Same-element pairing rolls from the better half of the range (§6).
-        value = Math.max(value, (value + Math.max(av, bv)) / 2);
-      }
-      bases[key] = Math.round(value * range(rng, 0.9, 1.1));
+      let value = rng() < 0.25 ? Math.max(av, bv) : (av + bv) / 2;
+      inherited[key] = value * range(rng, 0.94, 1.06);
     }
 
+    const parentPower = (powerOf(a.bases) + powerOf(b.bases)) / 2;
     const rareBloom = rng() < RARE_BLOOM_CHANCE;
 
-    let name, speciesId = null;
+    let bases, name, speciesId = null, profile = null;
+    const hybrid = sameElement ? null : hybridName(elements[0], elements[1]);
+
     if (sameElement) {
+      // Same-element pairing refines the line rather than reshaping it: no
+      // bias, just a modest power lift over the parents.
+      bases = fitToPower(inherited, { hp: 1, atk: 1, def: 1, spd: 1 },
+        parentPower * REFINED_POWER_BONUS);
       const parent = rng() < 0.5 ? a : b;
       name = parent.name;
       speciesId = parent.speciesId;
     } else {
-      name = hybridName(elsA[0], elsB[0]) + 'ling'; // placeholder naming
+      profile = HYBRID_PROFILES[hybrid];
+      // powerMult compensates for shape extremity. Equal power does NOT mean
+      // equal strength — the same lesson the 180-point stat budget taught in §7,
+      // so these are solved empirically by `node hybrids.js solve`.
+      bases = fitToPower(inherited, profile.bias,
+        parentPower * HYBRID_POWER_BONUS * (profile.powerMult || 1));
+      name = profile.name;
     }
 
     const child = createMonster({
@@ -793,12 +954,17 @@
       rareBloom,
       bred: true,
     });
+    if (profile) {
+      child.personality = profile.personality;
+      child.look = profile.look;
+    }
 
     return {
       child,
       rareBloom,
       kind: sameElement ? 'refined' : 'hybrid',
-      hybridElement: sameElement ? null : hybridName(elsA[0], elsB[0]),
+      hybridElement: hybrid,
+      profile,
     };
   }
 
@@ -823,10 +989,10 @@
     CONFIG, configure, MAX_LEVEL, TIERS, TRUST_REQUIRED,
     RARE_BLOOM_CHANCE, STATUSES,
     // data
-    ELEMENT_CYCLE, ELEMENTS, SPECIES, HYBRID_NAMES,
+    ELEMENT_CYCLE, ELEMENTS, SPECIES, HYBRID_NAMES, HYBRID_PROFILES,
     // helpers
     makeRng, speciesById, typeMultiplier, defenseMultiplier, oppositeElement,
-    hybridName, hybridKey, statAt, movesFor,
+    hybridName, hybridKey, orderElements, statAt, movesFor, powerOf, fitToPower,
     // core
     createMonster, damage, expectedDamage, chooseMove, chooseWildMove, effectiveSpd,
     createBattle, resolveTurn, activeMonster, affordable,
@@ -887,6 +1053,12 @@ function unpackMonster(d) {
   });
   m.xp = d.xp;
   m.hp = Math.max(1, Math.min(m.maxHp, d.hp));
+  // Personality and look are re-derived from the hybrid profile rather than
+  // stored, so edits to the profiles show up on existing saves.
+  if (m.elements.length > 1) {
+    const prof = G.HYBRID_PROFILES[G.hybridName(m.elements[0], m.elements[1])];
+    if (prof) { m.personality = prof.personality; m.look = prof.look; }
+  }
   return m;
 }
 
@@ -1110,7 +1282,10 @@ VIEWS.result = () => {
       <div class="blob big" style="${blobStyle(r.mon, true)}">${initial(r.mon)}</div></div>
       <div class="nm">${esc(r.mon.name)}</div>
       <div class="meta">Lv ${r.mon.level} &middot; ${esc(r.mon.elementLabel)} &middot;
-        ${r.mon.maxHp} HP / ${r.mon.atk} ATK / ${r.mon.def} DEF / ${r.mon.spd} SPD</div>` : ''}
+        ${r.mon.maxHp} HP / ${r.mon.atk} ATK / ${r.mon.def} DEF / ${r.mon.spd} SPD</div>
+      ${r.mon.look ? `<div class="meta" style="margin-top:10px;font-style:italic">
+        &ldquo;${esc(r.mon.look)}&rdquo;</div>` : ''}
+      ${r.mon.personality ? `<div class="meta" style="margin-top:4px">${esc(r.mon.personality)}</div>` : ''}` : ''}
     <button class="primary" style="margin-top:16px" data-act="view" data-v="home">Continue</button>
   </div>`;
 };
@@ -1131,15 +1306,21 @@ VIEWS.lab = () => {
       class="${S.breedPick.includes(m.uid) ? 'sel' : ''}" style="margin-bottom:8px">
       ${monRow(m)}</button>`).join('') || '<div class="meta">Tame more Infinimon first.</div>'}
   </div>
-  ${ready ? `<div class="card">
-    <div class="stat"><span>Result</span><span>${a.elements[0] === b.elements[0]
-      ? 'Refined ' + esc(a.name) : esc(G.hybridName(a.elements[0], b.elements[0])) + ' hybrid'}</span></div>
+  ${ready ? (() => {
+    const hyb = a.elements[0] === b.elements[0] ? null : G.hybridName(a.elements[0], b.elements[0]);
+    const prof = hyb ? G.HYBRID_PROFILES[hyb] : null;
+    return `<div class="card">
+    <div class="stat"><span>Result</span><span>${prof
+      ? esc(prof.name) + ' (' + esc(hyb) + ')' : 'Refined ' + esc(a.name)}</span></div>
+    ${prof ? `<div class="note" style="margin:8px 0 10px">
+      <em>${esc(prof.look)}</em><br>${esc(prof.personality)}</div>` : ''}
     <div class="stat"><span>Charge</span><span>${S.charge} / ${cost}</span></div>
     <div class="stat"><span>Rift Catalyst</span><span>${S.catalysts} available</span></div>
     <button class="primary" style="margin-top:12px" data-act="breed" ${canBreed ? '' : 'disabled'}>
       ${canBreed ? 'Begin resonance' : S.charge < cost ? 'Not enough Charge — battle more' : 'No Catalyst'}</button>
     <div class="note">Charge is earned by battling, not by waiting on a timer.</div>
-  </div>` : ''}
+  </div>`;
+  })() : ''}
   <button data-act="view" data-v="home">Back</button>`;
 };
 

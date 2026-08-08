@@ -27,14 +27,14 @@ via a plain `<script src>` rather than an ES module specifically so it does.
   offerings, the sub-25% bonus, banked Trust, and creature patience (§4)
 - Turn-based battle: Focus economy, damage formula, glancing blows, Focus
   surge, three status effects, SPD turn order with visible coin flips (§5)
-- Breeding: hybrid and same-element pairing, stat inheritance, Rare Bloom (§6)
+- Breeding: hybrid and same-element pairing, stat inheritance, Rare Bloom, and
+  all 15 hybrid species with their own stat biases and characters (§6)
 - Proportional stat growth, XP and leveling, and the Bond bonus (§7)
 - Save/load to localStorage, with a reset control
 
 ## What's deliberately missing
 
-Story, zones, the four playable characters, real move pools, hybrid species
-identity, and art. The prototype exists to answer one question — *do taming and
+Story, zones, the four playable characters, real move pools, and art. The prototype exists to answer one question — *do taming and
 breeding feel good?* — so everything not serving that was left out.
 
 Creature art is placeholder colored blobs. Creature design is founder-led (§9);
@@ -43,6 +43,8 @@ these are stand-ins so the mechanics can be felt without waiting on art.
 ## Run the simulations
 
 ```bash
+node hybrids.js         # audit the 15 hybrid species
+node hybrids.js solve   # re-solve per-hybrid power multipliers
 node playtest.js        # player experience — difficulty, not balance
 node simulate.js        # full validation report (~1 min)
 node simulate.js 100    # more runs per matchup, tighter numbers
@@ -143,13 +145,33 @@ retrying with banked Trust eventually always works. Creature patience (a 28%
 flee chance on the first failure, +22% per subsequent one) restores the stakes
 without ever wasting earned progress.
 
+## The hybrid pass
+
+Averaging two parents gave a creature no character of its own. Each hybrid
+element now carries a stat bias, so a Kettlepup is always steam-like regardless
+of which parents made it, while parent stats still drive individual variation.
+
+Two things had to be fixed for that to be fair:
+
+1. **The power formula ignored SPD** — right when SPD only set turn order, wrong
+   once glancing blows and Focus surge landed. Fast hybrids got a full
+   HP/ATK/DEF budget *plus* free speed: a **71.9-point** win-rate spread
+   tracking SPD almost perfectly. `powerOf` now carries a SPD term.
+2. **Equal power still isn't equal strength.** Flattening the type grid entirely
+   (`TYPE_SCALE: 0`) left a ~53-point spread, ruling out matchups. Extreme stat
+   shapes underperform what the power product predicts, so each hybrid carries
+   its own solved power multiplier — 0.84 for Hazewisp up to 1.19 for Sootleaf.
+
+Final: **23-point spread**, and a hybrid beats one of its own parents 63% of the
+time — a genuine upgrade that doesn't make the base roster disposable.
+
 ## Known open item
 
 Type advantage wins **89.9%** of fights (neutral 48.9%, disadvantage 10.3%).
 That is decisive enough to nearly settle a fight at team-select. It is readable
 for a young player, so this needs human judgement rather than more simulation.
-If it feels deterministic in play, narrow the multipliers from 1.5/0.75 toward
-1.35/0.8 in `engine.js`.
+`CONFIG.TYPE_SCALE` is the lever: 1.0 is the design's 1.5/0.75, 0.7 gives
+1.35/0.825, 0 flattens the grid entirely.
 
 ## Structure
 
@@ -159,6 +181,7 @@ If it feels deterministic in play, narrow the multipliers from 1.5/0.75 toward
 | `index.html` | Playable prototype |
 | `play.html` | Generated single-file build |
 | `build-artifact.js` | Inlines `engine.js` into `index.html` |
+| `hybrids.js` | Hybrid species audit, bias sweep, and power-multiplier solver |
 | `playtest.js` | Player-experience simulation — difficulty, not balance |
 | `simulate.js` | Validation report |
 | `tune.js` | Constant sweep |

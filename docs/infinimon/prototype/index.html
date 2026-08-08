@@ -159,6 +159,12 @@ function unpackMonster(d) {
   });
   m.xp = d.xp;
   m.hp = Math.max(1, Math.min(m.maxHp, d.hp));
+  // Personality and look are re-derived from the hybrid profile rather than
+  // stored, so edits to the profiles show up on existing saves.
+  if (m.elements.length > 1) {
+    const prof = G.HYBRID_PROFILES[G.hybridName(m.elements[0], m.elements[1])];
+    if (prof) { m.personality = prof.personality; m.look = prof.look; }
+  }
   return m;
 }
 
@@ -382,7 +388,10 @@ VIEWS.result = () => {
       <div class="blob big" style="${blobStyle(r.mon, true)}">${initial(r.mon)}</div></div>
       <div class="nm">${esc(r.mon.name)}</div>
       <div class="meta">Lv ${r.mon.level} &middot; ${esc(r.mon.elementLabel)} &middot;
-        ${r.mon.maxHp} HP / ${r.mon.atk} ATK / ${r.mon.def} DEF / ${r.mon.spd} SPD</div>` : ''}
+        ${r.mon.maxHp} HP / ${r.mon.atk} ATK / ${r.mon.def} DEF / ${r.mon.spd} SPD</div>
+      ${r.mon.look ? `<div class="meta" style="margin-top:10px;font-style:italic">
+        &ldquo;${esc(r.mon.look)}&rdquo;</div>` : ''}
+      ${r.mon.personality ? `<div class="meta" style="margin-top:4px">${esc(r.mon.personality)}</div>` : ''}` : ''}
     <button class="primary" style="margin-top:16px" data-act="view" data-v="home">Continue</button>
   </div>`;
 };
@@ -403,15 +412,21 @@ VIEWS.lab = () => {
       class="${S.breedPick.includes(m.uid) ? 'sel' : ''}" style="margin-bottom:8px">
       ${monRow(m)}</button>`).join('') || '<div class="meta">Tame more Infinimon first.</div>'}
   </div>
-  ${ready ? `<div class="card">
-    <div class="stat"><span>Result</span><span>${a.elements[0] === b.elements[0]
-      ? 'Refined ' + esc(a.name) : esc(G.hybridName(a.elements[0], b.elements[0])) + ' hybrid'}</span></div>
+  ${ready ? (() => {
+    const hyb = a.elements[0] === b.elements[0] ? null : G.hybridName(a.elements[0], b.elements[0]);
+    const prof = hyb ? G.HYBRID_PROFILES[hyb] : null;
+    return `<div class="card">
+    <div class="stat"><span>Result</span><span>${prof
+      ? esc(prof.name) + ' (' + esc(hyb) + ')' : 'Refined ' + esc(a.name)}</span></div>
+    ${prof ? `<div class="note" style="margin:8px 0 10px">
+      <em>${esc(prof.look)}</em><br>${esc(prof.personality)}</div>` : ''}
     <div class="stat"><span>Charge</span><span>${S.charge} / ${cost}</span></div>
     <div class="stat"><span>Rift Catalyst</span><span>${S.catalysts} available</span></div>
     <button class="primary" style="margin-top:12px" data-act="breed" ${canBreed ? '' : 'disabled'}>
       ${canBreed ? 'Begin resonance' : S.charge < cost ? 'Not enough Charge — battle more' : 'No Catalyst'}</button>
     <div class="note">Charge is earned by battling, not by waiting on a timer.</div>
-  </div>` : ''}
+  </div>`;
+  })() : ''}
   <button data-act="view" data-v="home">Back</button>`;
 };
 

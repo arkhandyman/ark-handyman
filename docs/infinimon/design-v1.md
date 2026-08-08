@@ -393,10 +393,47 @@ Same-element pairing isn't a wasted slot: it's how you improve a monster you alr
 
 | Trait | Rule |
 |---|---|
-| **Species** | Fully deterministic — Ember + Tide always produces the Steam-family hybrid |
-| **Stats** | Average of both parents per stat, ±10% variance, with a **25% chance per stat** to inherit the higher parent's value instead |
-| **Moves** | 2 drawn from its hybrid element's pool, plus a **50% chance** to inherit one move from either parent |
+| **Species** | Fully deterministic — Ember + Tide always produces Kettlepup, in either selection order |
+| **Stats** | Parents averaged (25% chance per stat at the higher value, ±6% variance), then reshaped by the hybrid's own stat bias — see below |
+| **Moves** | Drawn from its two elements, primary first |
 | **Bond** | Starts high — bred monsters are family, and they get the BondBonus from birth |
+
+### Hybrid identity
+
+Averaging two parents produces a creature with no character of its own. A Steam played and looked like "the mean of a Wickle and a Puddlup," which is not a discovery — it's arithmetic.
+
+**Each hybrid element now carries a stat bias**, so every Kettlepup is recognizably steam-like — fast, vaporous, fragile — regardless of which Ember and which Tide made it. Parent stats still drive individual variation, so your Kettlepup differs from mine; the *species* is what's now consistent.
+
+| Element | Creature | Character | Shape |
+|---|---|---|---|
+| Current | Voltfin | Restless, never settles | fast, high ATK |
+| Plasma | Arcflare | Volatile, burns bright and brief | **+46% ATK, −33% DEF** — the glass cannon |
+| Lumen | Glimmoss | Gentle, glows around those it trusts | bulky, low ATK |
+| Magnet | Lodefang | Immovable, collects metal debris | high DEF, slow |
+| Storm | Squallwing | Arrives before you hear it | **+42% SPD**, fragile |
+| Steam | Kettlepup | Excitable, whistles when happy | fast, balanced |
+| Marsh | Bogbloom | Patient to the point of seeming asleep | **+35% HP**, very slow |
+| Clay | Siltshell | Steady, reshapes when nervous | high DEF/HP |
+| Mist | Hazewisp | Rarely where you last looked | **+45% SPD**, evasive |
+| Ash | Sootleaf | Smoulders quietly, holds a grudge | bulky bruiser |
+| Magma | Cragmelt | Slow, heavy, absolutely certain | **+34% ATK**, slowest tier |
+| Cinder | Emberkite | Playful, leaves scorch marks | fast attacker, paper defence |
+| Grove | Barkroot | Ancient-feeling even when young | **+32% DEF**, the wall |
+| Spore | Puffcap | Drifts wherever the wind decides | fast, low ATK |
+| Dust | Grithare | Kicks up cover and vanishes into it | **+53% SPD**, the fastest |
+
+**The bias redistributes, it does not strengthen.** After applying it, HP/ATK/DEF are rescaled to hit a power target — otherwise "biased toward HP and DEF" would just mean "stronger," which is exactly the trap the 180-point stat budget fell into (§7).
+
+That rescale alone wasn't enough. Two further findings from `prototype/hybrids.js`:
+
+1. **The power formula was blind to SPD.** It read `HP × (DEF + C) × ATK` — correct when SPD only set turn order, wrong once glancing blows and Focus surge gave it teeth. Fast hybrids were getting a full HP/ATK/DEF budget *plus* free speed, producing a **71.9-point win-rate spread** that tracked SPD almost perfectly. The formula now carries a SPD term.
+2. **Equal power still doesn't mean equal strength.** Flattening the type grid entirely left a ~53-point spread, which ruled out matchups and pointed back at shape: extreme distributions underperform what the power product predicts. So each hybrid carries its own **power multiplier**, solved by gradient descent on measured win rate — from **0.84** for Hazewisp to **1.19** for Sootleaf.
+
+Result: **23-point spread** (from 71.9), nobody dominant, nobody unplayable.
+
+**Is breeding worth it?** A hybrid beats one of its own parents **63%** of the time — a real upgrade that doesn't make the base roster disposable.
+
+Reproduce with `node hybrids.js`; re-solve with `node hybrids.js solve`.
 
 ### Rare Bloom
 

@@ -73,6 +73,38 @@ Renaming a game in pre-production costs an afternoon. Renaming after launch cost
 
 ---
 
+## 3b. Hybrid creatures (15)
+
+The names above are the **elements**. These are the **creatures** made of them — the species you actually breed and see in your team.
+
+**Convention:** same as the base roster — a compound of an element trait and a creature or body noun, two syllables where possible, pronounceable by a young child.
+
+| Element | Placeholder | Built from | Final |
+|---|---|---|---|
+| Current | **Voltfin** | volt + fin | |
+| Plasma | **Arcflare** | arc + flare | |
+| Lumen | **Glimmoss** | glimmer + moss | |
+| Magnet | **Lodefang** | lodestone + fang | |
+| Storm | **Squallwing** | squall + wing | |
+| Steam | **Kettlepup** | kettle + pup | |
+| Marsh | **Bogbloom** | bog + bloom | |
+| Clay | **Siltshell** | silt + shell | |
+| Mist | **Hazewisp** | haze + wisp | |
+| Ash | **Sootleaf** | soot + leaf | |
+| Magma | **Cragmelt** | crag + melt | |
+| Cinder | **Emberkite** | ember + kite | |
+| Grove | **Barkroot** | bark + root | |
+| Spore | **Puffcap** | puff + cap | |
+| Dust | **Grithare** | grit + hare | |
+
+**Notes:**
+- `Arcflare`, `Squallwing`, and `Cragmelt` lean grander than the base roster, which is deliberate — hybrids should sound like an achievement. If that clashes with the cuter base names, this is the set to adjust.
+- `Emberkite` reuses "ember" as a word while Ember is also an element name. Possibly confusing.
+- `Kettlepup` and `Puffcap` are the most kid-friendly. `Lodefang` is the most severe.
+- Each hybrid also has a **look** and a **personality** line in `prototype/engine.js` under `HYBRID_PROFILES`. Those are placeholder characterizations too — they're the seed for your creature designs, not a constraint on them.
+
+---
+
 ## 4. Base monsters (12)
 
 **Convention:** a portmanteau or compound of a trait and an animal, kept pronounceable by a young child, two syllables where possible. Deliberately avoiding the `-mon` / `-chu` / `-saur` endings that read as derivative.
