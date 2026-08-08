@@ -1,6 +1,6 @@
 # Infinimon — Design Document v1
 
-**Status:** Draft, sections 1–10 complete.
+**Status:** Sections 1–10 complete. Battle, taming, and breeding are implemented and simulation-validated in [`prototype/`](./prototype/) — several numbers in §3, §5, and §7 were corrected by what the simulation found.
 
 **Scope target for v1:** 6 elements · 12 tameable base monsters · 15 bred hybrids · ~27 total dex · single-player · local save · no backend.
 
@@ -151,24 +151,28 @@ Averaging on defense means hybrids are *resilient but not immune* — a Steam hy
 
 ## 3. Base Roster
 
-Twelve tameable monsters, two per element. **Every base monster has a base stat total of exactly 180** — they differ in distribution, not raw power. This makes v1 balance trivially fair; rarity affects how hard something is to tame and how desirable it is to breed, never how strong it is.
+Twelve tameable monsters, two per element.
 
-| Name | Element | HP | ATK | DEF | SPD | Rarity | Personality | Look |
-|---|---|---|---|---|---|---|---|---|
-| **Voltmoth** | Spark | 35 | 55 | 25 | 65 | Common | Skittish, drawn to light | Pale moth, lightning veins flickering through its wings |
-| **Bolthorn** | Spark | 55 | 50 | 45 | 30 | Uncommon | Stubborn, plants its feet | Stocky ram, arcing charge between curled horns |
-| **Puddlup** | Tide | 60 | 35 | 55 | 30 | Common | Cheerful, endlessly patient | Round puddle-creature, oversized eyes, wobbles |
-| **Finwhisk** | Tide | 40 | 50 | 30 | 60 | Common | Playful, never still | Darting fish-otter with whisker fins |
-| **Wickle** | Ember | 35 | 60 | 25 | 60 | Common | Timid but brave when cornered | Fox kit with a candle-flame tail |
-| **Coalpaw** | Ember | 55 | 60 | 45 | 20 | Rare | Slow to trust, fiercely loyal after | Heavy badger, glowing cracks across its hide |
-| **Sproutle** | Verdant | 55 | 40 | 55 | 30 | Common | Curious, follows you home | Sapling creature with leaf-bud ears |
-| **Thornip** | Verdant | 40 | 60 | 30 | 50 | Common | Scrappy, picks fights | Bristly root-rodent, thorn ridge along its back |
-| **Pebbet** | Terra | 60 | 40 | 65 | 15 | Uncommon | Unhurried, immovable | Small stone tortoise, moss on the shell |
-| **Burrowl** | Terra | 45 | 50 | 40 | 45 | Uncommon | Watchful, hoards shiny things | Owl with earth-toned feathers and digging talons |
-| **Kitewing** | Gale | 30 | 45 | 30 | 75 | Rare | Aloof, hard to hold onto | Paper-thin gliding manta, translucent |
-| **Ruffle** | Gale | 50 | 50 | 40 | 40 | Common | Blustery, loud, harmless | Puffed-up bird, permanently windswept |
+> **These stat lines were solved by simulation, not assigned by hand.** The original design gave every monster a 180-point total for "trivial fairness." `prototype/balance.js` disproved that: equal budgets produced a **92-point win-rate spread** (Coalpaw 99.7%, Kitewing 7.7%), with `r = 0.987` correlation between `HP × (DEF + C) × ATK` and win rate. Stat points are not fungible — HP and DEF multiply each other, while SPD bought almost nothing. See §5 for the mechanical fix and §7 for the full finding.
 
-**Rarity distribution:** 7 Common · 3 Uncommon · 2 Rare. Rarity sets the Trust requirement for taming (§4) and the spawn rate per zone.
+| Name | Element | HP | ATK | DEF | SPD | Total | Rarity | Personality | Look |
+|---|---|---|---|---|---|---|---|---|---|
+| **Voltmoth** | Spark | 36 | 56 | 25 | 65 | 182 | Common | Skittish, drawn to light | Pale moth, lightning veins flickering through its wings |
+| **Bolthorn** | Spark | 53 | 48 | 43 | 30 | 174 | Uncommon | Stubborn, plants its feet | Stocky ram, arcing charge between curled horns |
+| **Puddlup** | Tide | 60 | 35 | 55 | 30 | 180 | Common | Cheerful, endlessly patient | Round puddle-creature, oversized eyes, wobbles |
+| **Finwhisk** | Tide | 41 | 51 | 30 | 60 | 182 | Common | Playful, never still | Darting fish-otter with whisker fins |
+| **Wickle** | Ember | 36 | 61 | 25 | 60 | 182 | Common | Timid but brave when cornered | Fox kit with a candle-flame tail |
+| **Coalpaw** | Ember | 52 | 56 | 42 | 20 | 170 | Rare | Slow to trust, fiercely loyal after | Heavy badger, glowing cracks across its hide |
+| **Sproutle** | Verdant | 55 | 40 | 55 | 30 | 180 | Common | Curious, follows you home | Sapling creature with leaf-bud ears |
+| **Thornip** | Verdant | 39 | 59 | 30 | 50 | 178 | Common | Scrappy, picks fights | Bristly root-rodent, thorn ridge along its back |
+| **Pebbet** | Terra | 60 | 40 | 65 | 15 | 180 | Uncommon | Unhurried, immovable | Small stone tortoise, moss on the shell |
+| **Burrowl** | Terra | 44 | 49 | 39 | 45 | 177 | Uncommon | Watchful, hoards shiny things | Owl with earth-toned feathers and digging talons |
+| **Kitewing** | Gale | 33 | 50 | 33 | 75 | 191 | Rare | Aloof, hard to hold onto | Paper-thin gliding manta, translucent |
+| **Ruffle** | Gale | 48 | 48 | 39 | 40 | 175 | Common | Blustery, loud, harmless | Puffed-up bird, permanently windswept |
+
+**Totals now range 170–191, and that spread is the point.** Fast, frail monsters need a slightly larger budget because SPD buys less than HP and DEF do. Measured win-rate spread is **10.8 points**, down from 92, and the correlation with the power formula has collapsed to `r = −0.145`.
+
+**Rarity distribution:** 7 Common · 3 Uncommon · 2 Rare. Rarity sets the Trust requirement for taming (§4) and the spawn rate per zone — never raw power.
 
 **Starter choice:** the player picks one of Wickle, Puddlup, or Sproutle at the start — a soft Fire/Water/Grass triangle that players already understand, without committing to it as the whole type system.
 
@@ -257,13 +261,25 @@ Each monster carries **4 moves**. A move has: name, element, power, Focus cost, 
 
 A typical turn uses Basic or Standard; Strong moves are what you save Focus for. Fights pace around the Basic/Standard tiers, so the turn counts below assume those.
 
+### What SPD does
+
+Originally SPD only decided turn order, which made it nearly worthless — that is what broke the stat budget in §3. It now does three things:
+
+| Effect | Rule |
+|---|---|
+| **Turn order** | Higher effective SPD acts first; ties resolve on a visible coin flip |
+| **Glancing blows** | A faster defender has a `min(0.40, SPDlead / 120)` chance that an incoming hit deals half damage |
+| **Focus surge** | Outspeed the opponent by 1.5× or more and you regenerate **+2 Focus** per turn instead of +1 |
+
+Glancing is damage reduction, not a miss — random whiffs feel bad, and a partial hit reads as the defender being quick rather than the attacker being unlucky. Focus surge is the important one: it ties SPD to the action economy, so a fast monster reaches its Strong moves roughly twice as often.
+
 ### Damage formula
 
 ```
 damage = round(
     Power
-  × ( ATK / (DEF + 50) )
-  × ( 1 + Level / 25 )
+  × ( ATK / (DEF + 70) )
+  × ( 1 + Level / 40 )
   × TypeMultiplier
   × BondBonus
   × K
@@ -275,42 +291,35 @@ damage = round(
 |---|---|
 | `TypeMultiplier` | 1.5 / 1.0 / 0.75 from the §2 grid (averaged on defense for hybrids) |
 | `BondBonus` | 1.05 if the monster was tamed or bred by this player and Bond is high, else 1.0 |
-| `K` | **0.6** — the global balance constant |
+| `K` | **0.30** — the global balance constant |
 | `Variance` | random 0.9 – 1.1 |
 
-The level term is `(1 + Level / 40)`, not `Level / 25`. See §7 — stats already grow proportionally, so a steep level term would double-scale damage.
+The level term is `Level / 40`, not `Level / 25`: stats already grow proportionally (§7), so a steeper term would double-scale damage.
 
-**`K` is the primary tuning knob.** Lower it for longer fights, raise it for faster ones. Everything else can stay fixed while this is tuned.
+> **`K` was 0.6 in the original design and that was wrong.** At 0.6 the measured median fight was **2 turns**, not the intended 5–7 — because Focus starting at 3 affords a Power-65 Strong move on turn one, which the hand-worked examples (built on Power 40) never accounted for. Worse, 2-turn fights meant **~25% of wild monsters were impossible to tame**: they crossed 50% HP and fainted in the same blow, so Attune never unlocked. `prototype/tune.js` swept 60 combinations of `K`, starting Focus, and the DEF constant to find values that hold.
 
 ### Stat growth
 
 Defined in §7. All four stats grow proportionally: `stat = round(base × (1 + Level / 20))`.
 
-### Worked example (validates the numbers)
+### Measured behaviour
 
-At level 5 every stat is `base × 1.25`, and the level term is `1 + 5/40 = 1.125`.
+These are simulation results across all 144 pairings, not hand arithmetic:
 
-Wickle attacks Puddlup with a Standard (Power 40) Ember move — Ember into Tide is 0.75:
+| Metric | Result | Target |
+|---|---|---|
+| Median fight length | **6 turns** (p10 3, p90 9) | 5–7 |
+| Drift, level 5 → 25 | **0.3 turns** | stable |
+| Taming window | **3 turns** median below 50% HP | ≥ 1 |
+| Impossible-to-tame rate | **0.0%** | < 10% |
+| Element win-rate spread | **9.4 points** | < 10 |
+| Per-monster win-rate spread | **10.8 points** | < 15 |
 
-```
-Wickle ATK 60 → 75.  Puddlup DEF 55 → 69, HP 60 → 75.
+Fight length is now flat across the whole level curve — proportional stat growth is what holds it there, and that was verified rather than assumed.
 
-40 × (75 / 119) × 1.125 × 0.75 × 0.6  ≈  13
-13 / 75 HP  →  ~17% per hit  →  ~6 turns
-```
+**One knob still worth a look:** type advantage currently wins **89.9%** of fights (neutral 48.9%, disadvantage 10.3%). That is decisive to the point of nearly settling a fight at team-select. Readable for a young player, but if it feels deterministic in testing, narrowing the multipliers from 1.5/0.75 toward 1.35/0.8 is the lever.
 
-Puddlup attacks Wickle with the same tier Tide move — Tide into Ember is 1.5:
-
-```
-Puddlup ATK 35 → 44.  Wickle DEF 25 → 31, HP 35 → 44.
-
-40 × (44 / 81) × 1.125 × 1.5 × 0.6  ≈  22
-22 / 44 HP  →  ~50% per hit  →  ~2-3 turns
-```
-
-**The same pair at level 25** (stats × 2.25, level term 1.625) gives ~17% and ~51% per hit — near-identical ratios. Proportional growth is what keeps fight length stable across the whole curve; this was verified, not assumed.
-
-**Expected spread:** a lopsided matchup (frail attacker, tanky defender, type advantage) resolves in 2–3 turns. An even matchup on Basic/Standard moves runs 5–7. That spread is intended — type advantage should feel decisive, and the slow end leaves room to stop at the 50% and 25% HP thresholds taming needs.
+Reproduce any of this with `node simulate.js` in `prototype/`.
 
 **Target: 3–7 turn fights.** Type advantage roughly doubles your damage — decisive but not instant, and slow enough that you can stop at the 50%/25% HP thresholds taming needs.
 
@@ -388,10 +397,10 @@ This is the entire chase mechanic for v1. It gives collectible rarity without ne
 
 | Stat | Range (base) | Role |
 |---|---|---|
-| **HP** | 30–60 | Damage absorbed before fainting |
-| **ATK** | 35–60 | Damage dealt |
+| **HP** | 33–60 | Damage absorbed before fainting |
+| **ATK** | 35–61 | Damage dealt |
 | **DEF** | 25–65 | Damage reduced |
-| **SPD** | 15–75 | Turn order; also the widest spread, so it's the most character-defining stat |
+| **SPD** | 15–75 | Turn order, glancing blows, and Focus regeneration (§5) — the widest spread and the most character-defining stat |
 | **Bond** | 0–100 | Not a combat stat — see below |
 
 ### Stat growth
@@ -405,6 +414,20 @@ All four combat stats grow at the same proportional rate. This matters more than
 Flat growth (`base + Level × 2`) narrows every ratio as levels climb — Pebbet's DEF starts 2.6× Wickle's and drifts toward 1.5×, so by endgame every monster converges toward mush. Proportional growth holds Pebbet at 2.6× forever. **A monster's identity is its stat shape, and the shape has to survive the level curve.**
 
 At max level a base stat of 60 becomes 135; a base stat of 25 becomes 56.
+
+### The stat budget finding
+
+The most useful thing the prototype produced is a negative result, and it is worth stating plainly because it generalizes:
+
+**Equal stat totals do not produce equal monsters.** The design assumed a flat 180-point budget made balance trivial. Simulation showed a 92-point win-rate spread, because:
+
+- Survivability is `HP × (DEF + C)` — **multiplicative**, so stacking both is quadratically strong
+- ATK is **linear**
+- SPD, when it only set turn order, was **nearly free** — points spent there were close to wasted
+
+So a slow, bulky monster converted its budget at a far better exchange rate than a fast, frail one. The fix was two-sided: give SPD real mechanical value (§5), then solve the remaining imbalance numerically with `prototype/autobalance.js`, which holds SPD fixed as each monster's identity and scales HP/ATK/DEF by gradient descent on measured win rate.
+
+Result: **10.8-point spread**, totals ranging 170–191. Budget by measured power, never by stat total.
 
 ### Level curve
 
@@ -603,5 +626,28 @@ If something on this list gets promoted into v1, something else has to come off.
 1. **Move pools.** 27 species × 4 moves is the single largest remaining content task. Needs its own pass, and it's the last thing blocking a full prototype.
 2. **Zone layout.** How many zones, which species spawn where, at what levels — this *is* the difficulty curve, and it can't be designed until move pools exist.
 3. **Names.** Everything invented so far is a placeholder. See `naming.md`.
-4. **Validate `K = 0.6` in simulation.** The §5 examples are now verified arithmetic at two points on the level curve, which is enough to justify building — but it is still not playtesting. A few hundred simulated battles across matchups is the actual check.
-5. **Audio.** Untouched so far. Low risk, but it needs an owner eventually.
+4. ~~**Validate `K` in simulation.**~~ **Done** — and it failed. `K = 0.6` produced 2-turn fights and a 25% impossible-tame rate. Now `K = 0.30` with a swept, measured configuration. See §5.
+5. **Type advantage may be too strong** at 89.9%. Needs human playtesting to judge; the multipliers are the lever.
+6. **Audio.** Untouched so far. Low risk, but it needs an owner eventually.
+
+---
+
+## Prototype
+
+`prototype/` implements §2–§7 as a shared engine used by both the browser build and the simulations.
+
+| File | What it does |
+|---|---|
+| `engine.js` | The rules. No dependencies, runs in Node and the browser |
+| `index.html` | Playable prototype — explore, battle, tame, breed |
+| `play.html` | Single-file build of the above, generated by `build-artifact.js` |
+| `simulate.js` | Full validation sweep — fight length, taming, balance, breeding rates |
+| `tune.js` | Sweeps `K`, starting Focus, and the DEF constant against design targets |
+| `balance.js` | Per-monster win rates, and the power-score correlation |
+| `autobalance.js` | Solves stat lines by gradient descent on measured win rate |
+
+```bash
+cd prototype
+node simulate.js        # validate everything
+open index.html         # play it
+```

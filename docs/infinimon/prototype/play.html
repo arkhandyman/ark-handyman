@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Infinimon — Playable Prototype</title>
+<style>
+  :root {
+    --bg: #10141c; --panel: #1a2030; --panel2: #232b3d; --line: #2f3950;
+    --ink: #e8edf7; --dim: #8f9ab4; --accent: #7fd4ff; --good: #6fcf7f;
+    --bad: #f2704a; --gold: #f5d547;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 ui-sans-serif,
+    system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; justify-content: center; padding: 12px;
+  }
+  #app { width: 100%; max-width: 460px; }
+  h1 { font-size: 20px; margin: 0 0 2px; letter-spacing: .5px; }
+  h2 { font-size: 15px; margin: 0 0 10px; color: var(--accent); text-transform: uppercase;
+       letter-spacing: 1.2px; font-weight: 700; }
+  .sub { color: var(--dim); font-size: 12px; margin-bottom: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+          padding: 14px; margin-bottom: 12px; }
+  button {
+    font: inherit; font-weight: 600; color: var(--ink); background: var(--panel2);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+    cursor: pointer; transition: .12s; width: 100%; text-align: left;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); background: #2b354a; }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #06202c; border-color: var(--accent);
+                   text-align: center; }
+  button.primary:hover:not(:disabled) { background: #a3e2ff; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* creature placeholder art */
+  .mon { display: flex; align-items: center; gap: 10px; }
+  .blob { width: 54px; height: 54px; border-radius: 42% 58% 55% 45% / 52% 45% 55% 48%;
+          display: grid; place-items: center; font-weight: 800; font-size: 20px;
+          color: #0d1017; flex: none; box-shadow: inset 0 -6px 14px rgba(0,0,0,.28); }
+  .blob.big { width: 78px; height: 78px; font-size: 28px; }
+  .nm { font-weight: 700; }
+  .meta { font-size: 11.5px; color: var(--dim); }
+  .chip { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px;
+          border-radius: 20px; letter-spacing: .4px; text-transform: uppercase;
+          color: #0d1017; }
+
+  .bar { height: 8px; background: #0c1017; border-radius: 6px; overflow: hidden;
+         margin-top: 5px; border: 1px solid var(--line); }
+  .bar > div { height: 100%; transition: width .35s ease; }
+  .hpfill { background: var(--good); }
+  .hpfill.mid { background: var(--gold); }
+  .hpfill.low { background: var(--bad); }
+
+  .focus { display: flex; gap: 4px; margin-top: 7px; }
+  .pip { width: 15px; height: 6px; border-radius: 3px; background: #0c1017;
+         border: 1px solid var(--line); }
+  .pip.on { background: var(--accent); border-color: var(--accent); }
+
+  .log { background: #0c1017; border: 1px solid var(--line); border-radius: 10px;
+         padding: 9px 11px; height: 96px; overflow-y: auto; font-size: 12.5px;
+         color: var(--dim); line-height: 1.55; }
+  .log b { color: var(--ink); font-weight: 600; }
+
+  .mv { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .mv .cost { font-size: 10.5px; color: var(--dim); font-weight: 700; }
+  .mv .pw { font-size: 10.5px; color: var(--dim); }
+
+  /* attunement */
+  #track { position: relative; height: 46px; background: #0c1017; border-radius: 10px;
+           border: 1px solid var(--line); overflow: hidden; margin: 12px 0; }
+  #zone { position: absolute; top: 0; bottom: 0; background: rgba(111,207,127,.22);
+          border-left: 2px solid var(--good); border-right: 2px solid var(--good); }
+  #needle { position: absolute; top: 0; bottom: 0; width: 3px; background: var(--gold);
+            box-shadow: 0 0 12px var(--gold); }
+  .trust { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+  .tdot { width: 11px; height: 11px; border-radius: 50%; background: #0c1017;
+          border: 1px solid var(--line); }
+  .tdot.hit { background: var(--good); border-color: var(--good); }
+
+  .banner { text-align: center; padding: 16px 10px; }
+  .banner .t { font-size: 19px; font-weight: 800; margin-bottom: 4px; }
+  .stat { display: flex; justify-content: space-between; font-size: 12px;
+          padding: 2px 0; border-bottom: 1px solid var(--line); }
+  .stat span:last-child { font-weight: 700; }
+  .note { font-size: 11px; color: var(--dim); margin-top: 10px; line-height: 1.5; }
+  .sel { outline: 2px solid var(--accent); }
+  .res { display: flex; gap: 10px; font-size: 11.5px; color: var(--dim); flex-wrap: wrap; }
+  .res b { color: var(--gold); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/*
+ * Infinimon — prototype rules engine
+ *
+ * Pure rules, no rendering, no dependencies. Runs in both Node and the browser
+ * so the simulation harness and the playable prototype share one source of truth.
+ *
+ * Implements design-v1.md sections 2, 3, 5, 6, 7.
+ * All names are placeholders — see naming.md.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.Infinimon = factory();
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  // ---------------------------------------------------------------------------
+  // Tuning constants (§5, §7)
+  // ---------------------------------------------------------------------------
+
+  // Mutable so the tuning harness can sweep them. Defaults are the values
+  // design-v1.md currently specifies; tune.js is what justifies changing them.
+  const CONFIG = {
+    // Values chosen by tune.js, which swept 60 combinations and scored each on
+    // fight length, taming feasibility, and element balance. K was 0.6 in the
+    // original design, which produced 2-turn fights and made ~25% of wild
+    // monsters impossible to tame.
+    K: 0.30,                  // global damage constant — the primary tuning knob
+    DEF_CONSTANT: 70,         // softens the ATK/DEF ratio
+    LEVEL_TERM_DIVISOR: 40,   // damage level term: 1 + Level/40
+    STAT_GROWTH_DIVISOR: 20,  // stat growth: base * (1 + Level/20)
+    FOCUS_START: 3,           // starting Focus — affords one Strong move up front
+    FOCUS_MAX: 6,
+    FOCUS_REGEN: 1,
+
+    // SPD used to decide turn order and nothing else, which made it nearly
+    // worthless — balance.js measured r = 0.987 between HP x (DEF+C) x ATK and
+    // win rate, with fast monsters at the bottom. These give SPD real value.
+    GLANCE_DIVISOR: 120,      // SPD lead needed per point of glance chance
+    GLANCE_CAP: 0.40,         // max chance an incoming hit glances
+    GLANCE_DAMAGE: 0.5,       // a glancing blow deals half damage
+    FOCUS_SURGE_RATIO: 1.5,   // outspeed by this much and you regen Focus faster
+  };
+
+  function configure(patch) {
+    Object.assign(CONFIG, patch);
+  }
+
+  const MAX_LEVEL = 25;
+  const BOND_BONUS_THRESHOLD = 60;
+  const BOND_BONUS = 1.05;
+  const RARE_BLOOM_CHANCE = 0.05;
+  const RARE_BLOOM_MULT = 1.10;
+
+  // ---------------------------------------------------------------------------
+  // Seedable RNG — simulations must be reproducible
+  // ---------------------------------------------------------------------------
+
+  function makeRng(seed) {
+    let s = (seed >>> 0) || 1;
+    return function rng() {
+      // mulberry32
+      s = (s + 0x6d2b79f5) >>> 0;
+      let t = s;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  const pick = (rng, arr) => arr[Math.floor(rng() * arr.length)];
+  const range = (rng, lo, hi) => lo + rng() * (hi - lo);
+
+  // ---------------------------------------------------------------------------
+  // Elements (§2)
+  //
+  // Cycle order. Each element is strong against the next two, weak against the
+  // previous two, and neutral against its opposite (three steps away).
+  // ---------------------------------------------------------------------------
+
+  const ELEMENT_CYCLE = ['spark', 'tide', 'ember', 'verdant', 'terra', 'gale'];
+
+  const ELEMENTS = {
+    spark:   { name: 'Spark',   color: '#F5D547', dark: '#8A7410' },
+    tide:    { name: 'Tide',    color: '#4EA8DE', dark: '#1B4F72' },
+    ember:   { name: 'Ember',   color: '#F2704A', dark: '#8A2E12' },
+    verdant: { name: 'Verdant', color: '#6FCF7F', dark: '#1E5B2A' },
+    terra:   { name: 'Terra',   color: '#C89B6A', dark: '#6B4A24' },
+    gale:    { name: 'Gale',    color: '#B9C7D6', dark: '#4A5A6B' },
+  };
+
+  const STRONG = 1.5;
+  const NEUTRAL = 1.0;
+  const WEAK = 0.75;
+
+  /** Multiplier for a single attacking element into a single defending element. */
+  function typeMultiplier(attackEl, defendEl) {
+    const i = ELEMENT_CYCLE.indexOf(attackEl);
+    const j = ELEMENT_CYCLE.indexOf(defendEl);
+    if (i < 0 || j < 0) return NEUTRAL;
+    const delta = (j - i + 6) % 6;
+    if (delta === 1 || delta === 2) return STRONG; // beats the next two
+    if (delta === 4 || delta === 5) return WEAK;   // loses to the previous two
+    return NEUTRAL;                                // self, and the opposite
+  }
+
+  /**
+   * Defensive multiplier. Hybrids average their two elements, which is what
+   * makes them resilient rather than immune (§2).
+   */
+  function defenseMultiplier(attackEl, defenderElements) {
+    const mults = defenderElements.map((e) => typeMultiplier(attackEl, e));
+    const avg = mults.reduce((a, b) => a + b, 0) / mults.length;
+    return Math.round(avg * 100) / 100;
+  }
+
+  /** The element three steps away — it beats both of your weaknesses (§ coverage). */
+  function oppositeElement(el) {
+    return ELEMENT_CYCLE[(ELEMENT_CYCLE.indexOf(el) + 3) % 6];
+  }
+
+  // ---------------------------------------------------------------------------
+  // Hybrid elements (§2) — 15 pairings
+  // ---------------------------------------------------------------------------
+
+  const HYBRID_NAMES = {
+    'spark|tide': 'Current',
+    'ember|spark': 'Plasma',
+    'spark|verdant': 'Lumen',
+    'spark|terra': 'Magnet',
+    'gale|spark': 'Storm',
+    'ember|tide': 'Steam',
+    'tide|verdant': 'Marsh',
+    'terra|tide': 'Clay',
+    'gale|tide': 'Mist',
+    'ember|verdant': 'Ash',
+    'ember|terra': 'Magma',
+    'ember|gale': 'Cinder',
+    'terra|verdant': 'Grove',
+    'gale|verdant': 'Spore',
+    'gale|terra': 'Dust',
+  };
+
+  const hybridKey = (a, b) => [a, b].sort().join('|');
+  const hybridName = (a, b) => HYBRID_NAMES[hybridKey(a, b)] || null;
+
+  // ---------------------------------------------------------------------------
+  // Base roster (§3) — every base monster totals exactly 180
+  // ---------------------------------------------------------------------------
+
+  /*
+   * Stat lines solved by autobalance.js, not hand-assigned.
+   *
+   * The design originally gave every base monster a 180-point total for "trivial
+   * fairness". Simulation disproved that: stat points are not fungible, so equal
+   * budgets produced a 92-point win-rate spread (Coalpaw 99.7%, Kitewing 7.7%).
+   * These lines equalize measured win rate instead, landing at a 6.4-point
+   * spread. Totals now range 170-191 — fast, frail monsters need a slightly
+   * larger budget because SPD buys less than HP and DEF do.
+   */
+  const SPECIES = [
+    { id: 'voltmoth', name: 'Voltmoth', element: 'spark',   hp: 36, atk: 56, def: 25, spd: 65, rarity: 'common',   look: 'Pale moth, lightning veins in its wings' },
+    { id: 'bolthorn', name: 'Bolthorn', element: 'spark',   hp: 53, atk: 48, def: 43, spd: 30, rarity: 'uncommon', look: 'Stocky ram, charge arcing between horns' },
+    { id: 'puddlup',  name: 'Puddlup',  element: 'tide',    hp: 60, atk: 35, def: 55, spd: 30, rarity: 'common',   look: 'Round puddle-creature, oversized eyes' },
+    { id: 'finwhisk', name: 'Finwhisk', element: 'tide',    hp: 41, atk: 51, def: 30, spd: 60, rarity: 'common',   look: 'Darting fish-otter with whisker fins' },
+    { id: 'wickle',   name: 'Wickle',   element: 'ember',   hp: 36, atk: 61, def: 25, spd: 60, rarity: 'common',   look: 'Fox kit with a candle-flame tail' },
+    { id: 'coalpaw',  name: 'Coalpaw',  element: 'ember',   hp: 52, atk: 56, def: 42, spd: 20, rarity: 'rare',     look: 'Heavy badger, glowing cracks in its hide' },
+    { id: 'sproutle', name: 'Sproutle', element: 'verdant', hp: 55, atk: 40, def: 55, spd: 30, rarity: 'common',   look: 'Sapling creature with leaf-bud ears' },
+    { id: 'thornip',  name: 'Thornip',  element: 'verdant', hp: 39, atk: 59, def: 30, spd: 50, rarity: 'common',   look: 'Bristly root-rodent, thorn ridge' },
+    { id: 'pebbet',   name: 'Pebbet',   element: 'terra',   hp: 60, atk: 40, def: 65, spd: 15, rarity: 'uncommon', look: 'Small stone tortoise, moss on the shell' },
+    { id: 'burrowl',  name: 'Burrowl',  element: 'terra',   hp: 44, atk: 49, def: 39, spd: 45, rarity: 'uncommon', look: 'Owl with earth feathers and digging talons' },
+    { id: 'kitewing', name: 'Kitewing', element: 'gale',    hp: 33, atk: 50, def: 33, spd: 75, rarity: 'rare',     look: 'Paper-thin gliding manta, translucent' },
+    { id: 'ruffle',   name: 'Ruffle',   element: 'gale',    hp: 48, atk: 48, def: 39, spd: 40, rarity: 'common',   look: 'Puffed-up bird, permanently windswept' },
+  ];
+
+  const speciesById = (id) => SPECIES.find((s) => s.id === id);
+
+  const TRUST_REQUIRED = { common: 3, uncommon: 4, rare: 5 };
+  const SPAWN_WEIGHT = { common: 10, uncommon: 4, rare: 1 };
+
+  // ---------------------------------------------------------------------------
+  // Moves (§5)
+  //
+  // Placeholder pools. Real move design is still an open question — every
+  // monster currently gets Basic / Standard / Strong in its own element plus a
+  // Standard coverage move in the opposite element, which by construction
+  // answers both of its weaknesses.
+  // ---------------------------------------------------------------------------
+
+  const TIERS = {
+    basic:    { power: 25, focus: 0 },
+    standard: { power: 40, focus: 1 },
+    strong:   { power: 65, focus: 3 },
+  };
+
+  const MOVE_NAMES = {
+    spark:   { basic: 'Jolt',        standard: 'Arc Lash',   strong: 'Thunderhead' },
+    tide:    { basic: 'Splash',      standard: 'Undertow',   strong: 'Riptide' },
+    ember:   { basic: 'Cinder Flick', standard: 'Flame Lash', strong: 'Firestorm' },
+    verdant: { basic: 'Vine Tap',    standard: 'Bramble',    strong: 'Overgrowth' },
+    terra:   { basic: 'Pebble Toss', standard: 'Stone Slam', strong: 'Landslide' },
+    gale:    { basic: 'Gust',        standard: 'Crosswind',  strong: 'Cyclone' },
+  };
+
+  const STATUS_BY_ELEMENT = {
+    ember: 'scorched', spark: 'scorched',
+    tide: 'drenched', gale: 'drenched',
+    verdant: 'rooted', terra: 'rooted',
+  };
+
+  const STATUSES = {
+    scorched: { name: 'Scorched', turns: 3, tick: 0.05 },
+    drenched: { name: 'Drenched', turns: 3, spdMult: 0.5 },
+    rooted:   { name: 'Rooted',   turns: 2, noSwitch: true },
+  };
+
+  function makeMove(element, tier) {
+    return {
+      name: MOVE_NAMES[element][tier],
+      element,
+      tier,
+      power: TIERS[tier].power,
+      focus: TIERS[tier].focus,
+      // Strong moves carry a chance to inflict their element's status.
+      status: tier === 'strong' ? STATUS_BY_ELEMENT[element] : null,
+      statusChance: tier === 'strong' ? 0.25 : 0,
+    };
+  }
+
+  function movesFor(elements) {
+    const primary = elements[0];
+    const secondary = elements[1] || oppositeElement(primary);
+    return [
+      makeMove(primary, 'basic'),
+      makeMove(primary, 'standard'),
+      makeMove(primary, 'strong'),
+      makeMove(secondary, 'standard'), // coverage
+    ];
+  }
+
+  // ---------------------------------------------------------------------------
+  // Monsters (§7)
+  // ---------------------------------------------------------------------------
+
+  let nextUid = 1;
+
+  /** Proportional growth — preserves each monster's stat *shape* at every level. */
+  function statAt(base, level, mult) {
+    return Math.round(base * (1 + level / CONFIG.STAT_GROWTH_DIVISOR) * (mult || 1));
+  }
+
+  function createMonster(opts) {
+    const {
+      speciesId, level = 5, bases, elements, name,
+      bond = 30, rareBloom = false, bred = false,
+    } = opts;
+
+    const sp = speciesId ? speciesById(speciesId) : null;
+    const els = elements || [sp.element];
+    const b = bases || { hp: sp.hp, atk: sp.atk, def: sp.def, spd: sp.spd };
+    const mult = rareBloom ? RARE_BLOOM_MULT : 1;
+
+    const m = {
+      uid: nextUid++,
+      speciesId: speciesId || null,
+      name: name || sp.name,
+      elements: els,
+      elementLabel: els.length > 1 ? hybridName(els[0], els[1]) : ELEMENTS[els[0]].name,
+      rarity: sp ? sp.rarity : 'bred',
+      level,
+      bases: b,
+      rareBloom,
+      bred,
+      bond,
+      status: null,
+      statusTurns: 0,
+      moves: movesFor(els),
+    };
+    m.maxHp = statAt(b.hp, level, mult);
+    m.hp = m.maxHp;
+    m.atk = statAt(b.atk, level, mult);
+    m.def = statAt(b.def, level, mult);
+    m.spd = statAt(b.spd, level, mult);
+    return m;
+  }
+
+  const effectiveSpd = (m) =>
+    m.status === 'drenched' ? Math.round(m.spd * STATUSES.drenched.spdMult) : m.spd;
+
+  const bondBonusOf = (m) => (m.bond >= BOND_BONUS_THRESHOLD ? BOND_BONUS : 1.0);
+
+  // ---------------------------------------------------------------------------
+  // Damage (§5)
+  // ---------------------------------------------------------------------------
+
+  function damage(attacker, defender, move, rng, opts) {
+    const mult = defenseMultiplier(move.element, defender.elements);
+    const levelTerm = 1 + attacker.level / CONFIG.LEVEL_TERM_DIVISOR;
+    const variance = opts && opts.noVariance ? 1 : range(rng, 0.9, 1.1);
+    const raw =
+      move.power *
+      (attacker.atk / (defender.def + CONFIG.DEF_CONSTANT)) *
+      levelTerm *
+      mult *
+      bondBonusOf(attacker) *
+      CONFIG.K *
+      variance;
+    return { amount: Math.max(1, Math.round(raw)), multiplier: mult };
+  }
+
+  /** Expected damage with variance removed — used by the AI and the UI preview. */
+  const expectedDamage = (a, d, mv) => damage(a, d, mv, null, { noVariance: true }).amount;
+
+  // ---------------------------------------------------------------------------
+  // Battle (§5)
+  // ---------------------------------------------------------------------------
+
+  function createBattle(playerTeam, wild, rng) {
+    return {
+      rng,
+      team: playerTeam,
+      activeIndex: 0,
+      wild,
+      playerFocus: CONFIG.FOCUS_START,
+      wildFocus: CONFIG.FOCUS_START,
+      turn: 1,
+      log: [],
+      over: false,
+      outcome: null,
+      // Highest HP fraction the wild monster has been seen below — drives the
+      // taming window measurement.
+      wildLowWater: 1,
+    };
+  }
+
+  const activeMonster = (b) => b.team[b.activeIndex];
+
+  function affordable(monster, focus) {
+    return monster.moves.filter((mv) => mv.focus <= focus);
+  }
+
+  /** Baseline "competent player" AI: highest expected damage it can afford. */
+  function chooseMove(attacker, defender, focus) {
+    const options = affordable(attacker, focus);
+    let best = options[0];
+    let bestVal = -1;
+    for (const mv of options) {
+      const val = expectedDamage(attacker, defender, mv);
+      if (val > bestVal) { bestVal = val; best = mv; }
+    }
+    return best;
+  }
+
+  function applyStatusTick(m, b) {
+    if (!m.status) return;
+    const s = STATUSES[m.status];
+    if (s.tick) {
+      const dmg = Math.max(1, Math.round(m.maxHp * s.tick));
+      m.hp = Math.max(0, m.hp - dmg);
+      b.log.push(`${m.name} takes ${dmg} from ${s.name}.`);
+    }
+    m.statusTurns -= 1;
+    if (m.statusTurns <= 0) {
+      b.log.push(`${m.name} is no longer ${STATUSES[m.status].name}.`);
+      m.status = null;
+    }
+  }
+
+  /**
+   * Chance an incoming hit glances off a faster defender. This is damage
+   * reduction rather than a miss — random whiffs feel bad, and a partial hit
+   * reads as the defender being quick rather than the attacker being unlucky.
+   */
+  function glanceChance(attacker, defender) {
+    const lead = effectiveSpd(defender) - effectiveSpd(attacker);
+    if (lead <= 0) return 0;
+    return Math.min(CONFIG.GLANCE_CAP, lead / CONFIG.GLANCE_DIVISOR);
+  }
+
+  function strike(attacker, defender, move, b) {
+    let { amount, multiplier } = damage(attacker, defender, move, b.rng);
+
+    const glanced = b.rng() < glanceChance(attacker, defender);
+    if (glanced) amount = Math.max(1, Math.round(amount * CONFIG.GLANCE_DAMAGE));
+
+    defender.hp = Math.max(0, defender.hp - amount);
+    const tag = glanced ? ` ${defender.name} slips most of it!`
+      : multiplier > 1.05 ? ' It hits hard!'
+      : multiplier < 0.95 ? " It's not very effective." : '';
+    b.log.push(`${attacker.name} used ${move.name} — ${amount} damage.${tag}`);
+
+    if (move.status && b.rng() < move.statusChance && !defender.status) {
+      defender.status = move.status;
+      defender.statusTurns = STATUSES[move.status].turns;
+      b.log.push(`${defender.name} is ${STATUSES[move.status].name}!`);
+    }
+    return amount;
+  }
+
+  /**
+   * Resolve one full turn. `playerMove` may be null when the player switched or
+   * attuned, in which case only the wild monster acts.
+   */
+  function resolveTurn(b, playerMove) {
+    if (b.over) return b;
+    const player = activeMonster(b);
+    const wild = b.wild;
+
+    if (playerMove) b.playerFocus -= playerMove.focus;
+    const wildMove = chooseMove(wild, player, b.wildFocus);
+    b.wildFocus -= wildMove.focus;
+
+    // Turn order by SPD; ties resolve on a visible coin flip (§5).
+    let playerFirst;
+    const ps = effectiveSpd(player);
+    const ws = effectiveSpd(wild);
+    if (ps !== ws) playerFirst = ps > ws;
+    else {
+      playerFirst = b.rng() < 0.5;
+      b.log.push(`Speed tie — coin flip: ${playerFirst ? 'you' : wild.name} go first.`);
+    }
+
+    const order = playerFirst
+      ? [[player, wild, playerMove], [wild, player, wildMove]]
+      : [[wild, player, wildMove], [player, wild, playerMove]];
+
+    for (const [atk, def, mv] of order) {
+      if (b.over || atk.hp <= 0 || !mv) continue;
+      strike(atk, def, mv, b);
+      b.wildLowWater = Math.min(b.wildLowWater, wild.hp / wild.maxHp);
+      if (def.hp <= 0) {
+        b.log.push(`${def.name} fainted.`);
+        if (def === wild) finish(b, 'wild_fainted');
+        else if (!switchToNextAlive(b)) finish(b, 'player_wiped');
+      }
+    }
+
+    if (!b.over) {
+      applyStatusTick(player, b);
+      applyStatusTick(wild, b);
+      b.wildLowWater = Math.min(b.wildLowWater, wild.hp / wild.maxHp);
+      if (wild.hp <= 0) finish(b, 'wild_fainted');
+      else if (activeMonster(b).hp <= 0 && !switchToNextAlive(b)) finish(b, 'player_wiped');
+    }
+
+    if (!b.over) {
+      b.turn += 1;
+      // Outspeeding by a wide margin regenerates Focus faster, so SPD feeds the
+      // action economy instead of only deciding who swings first.
+      const cur = activeMonster(b);
+      const pSpd = effectiveSpd(cur);
+      const wSpd = effectiveSpd(wild);
+      const pRegen = CONFIG.FOCUS_REGEN + (pSpd >= wSpd * CONFIG.FOCUS_SURGE_RATIO ? 1 : 0);
+      const wRegen = CONFIG.FOCUS_REGEN + (wSpd >= pSpd * CONFIG.FOCUS_SURGE_RATIO ? 1 : 0);
+      b.playerFocus = Math.min(CONFIG.FOCUS_MAX, b.playerFocus + pRegen);
+      b.wildFocus = Math.min(CONFIG.FOCUS_MAX, b.wildFocus + wRegen);
+    }
+    return b;
+  }
+
+  function switchToNextAlive(b) {
+    const i = b.team.findIndex((m) => m.hp > 0);
+    if (i < 0) return false;
+    b.activeIndex = i;
+    return true;
+  }
+
+  function finish(b, outcome) {
+    b.over = true;
+    b.outcome = outcome;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Taming (§4)
+  // ---------------------------------------------------------------------------
+
+  const canAttune = (wild) => wild.hp > 0 && wild.hp / wild.maxHp < 0.5;
+
+  /**
+   * Score an attunement attempt.
+   *   taps          — number of taps that landed in the green zone (0-3)
+   *   crystalMatch  — a matching-element Resonance Crystal was offered
+   *   banked        — Trust carried from previous failed attempts (caps at 2)
+   */
+  function attune(wild, { taps, crystalMatch, banked = 0 }) {
+    const required = TRUST_REQUIRED[wild.rarity] || 3;
+    let trust = taps;
+    if (crystalMatch) trust += 1;
+    if (wild.hp / wild.maxHp < 0.25) trust += 1;
+    trust += banked;
+
+    const success = trust >= required;
+    return {
+      success,
+      trust,
+      required,
+      // A failure banks progress so the next encounter is easier (§4).
+      newBanked: success ? 0 : Math.min(2, banked + 1),
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Breeding (§6)
+  // ---------------------------------------------------------------------------
+
+  const STAT_KEYS = ['hp', 'atk', 'def', 'spd'];
+
+  function breed(a, b, rng) {
+    const elsA = a.elements;
+    const elsB = b.elements;
+
+    // v1 does not support hybrid x hybrid (§6).
+    if (elsA.length > 1 || elsB.length > 1) {
+      return { error: 'Hybrid pairs are a v2 feature — breed two base monsters.' };
+    }
+
+    const sameElement = elsA[0] === elsB[0];
+    const elements = sameElement ? [elsA[0]] : [elsA[0], elsB[0]];
+
+    const bases = {};
+    for (const key of STAT_KEYS) {
+      const av = a.bases[key];
+      const bv = b.bases[key];
+      let value;
+      if (rng() < 0.25) {
+        value = Math.max(av, bv);       // 25% chance to inherit the better parent
+      } else {
+        value = (av + bv) / 2;          // otherwise average
+      }
+      if (sameElement) {
+        // Same-element pairing rolls from the better half of the range (§6).
+        value = Math.max(value, (value + Math.max(av, bv)) / 2);
+      }
+      bases[key] = Math.round(value * range(rng, 0.9, 1.1));
+    }
+
+    const rareBloom = rng() < RARE_BLOOM_CHANCE;
+
+    let name, speciesId = null;
+    if (sameElement) {
+      const parent = rng() < 0.5 ? a : b;
+      name = parent.name;
+      speciesId = parent.speciesId;
+    } else {
+      name = hybridName(elsA[0], elsB[0]) + 'ling'; // placeholder naming
+    }
+
+    const child = createMonster({
+      speciesId,
+      elements,
+      bases,
+      name,
+      level: 5,
+      bond: 50,       // bred monsters start bonded (§7)
+      rareBloom,
+      bred: true,
+    });
+
+    return {
+      child,
+      rareBloom,
+      kind: sameElement ? 'refined' : 'hybrid',
+      hybridElement: sameElement ? null : hybridName(elsA[0], elsB[0]),
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Encounters
+  // ---------------------------------------------------------------------------
+
+  function randomWild(rng, level) {
+    const pool = [];
+    for (const s of SPECIES) {
+      const w = SPAWN_WEIGHT[s.rarity];
+      for (let i = 0; i < w; i++) pool.push(s);
+    }
+    const sp = pick(rng, pool);
+    return createMonster({ speciesId: sp.id, level, bond: 0 });
+  }
+
+  // ---------------------------------------------------------------------------
+
+  return {
+    // config
+    CONFIG, configure, MAX_LEVEL, TIERS, TRUST_REQUIRED,
+    RARE_BLOOM_CHANCE, STATUSES,
+    // data
+    ELEMENT_CYCLE, ELEMENTS, SPECIES, HYBRID_NAMES,
+    // helpers
+    makeRng, speciesById, typeMultiplier, defenseMultiplier, oppositeElement,
+    hybridName, hybridKey, statAt, movesFor,
+    // core
+    createMonster, damage, expectedDamage, chooseMove, effectiveSpd,
+    createBattle, resolveTurn, activeMonster, affordable,
+    canAttune, attune, breed, randomWild,
+  };
+});
+
+</script>
+<script>
+const G = window.Infinimon;
+const app = document.getElementById('app');
+const rng = G.makeRng(Date.now() % 100000);
+
+// ---------------------------------------------------------------------------
+// state
+// ---------------------------------------------------------------------------
+
+const S = {
+  view: 'start',
+  team: [],
+  crystals: { spark: 2, tide: 2, ember: 2, verdant: 2, terra: 2, gale: 2 },
+  catalysts: 3,
+  charge: 0,
+  dex: new Set(),
+  banked: {},
+  battle: null,
+  wildLevel: 5,
+  breedPick: [],
+  lastResult: null,
+  attune: null,
+};
+
+const el = (e) => G.ELEMENTS[e];
+const initial = (m) => m.name[0].toUpperCase();
+const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+function blobStyle(m, big) {
+  const c = el(m.elements[0]).color;
+  const c2 = m.elements[1] ? el(m.elements[1]).color : c;
+  return `background:linear-gradient(140deg,${c},${c2});` +
+    (m.rareBloom ? 'box-shadow:0 0 0 3px var(--gold),inset 0 -6px 14px rgba(0,0,0,.28);' : '');
+}
+
+function monRow(m, extra) {
+  return `<div class="mon">
+    <div class="blob" style="${blobStyle(m)}">${initial(m)}</div>
+    <div style="flex:1;min-width:0">
+      <div class="nm">${esc(m.name)} ${m.rareBloom ? '<span style="color:var(--gold)">&#10022;</span>' : ''}</div>
+      <div class="meta">Lv ${m.level} &middot; ${esc(m.elementLabel)} &middot; ${m.hp}/${m.maxHp} HP</div>
+      ${extra || ''}
+    </div>
+  </div>`;
+}
+
+function hpBar(m) {
+  const p = (m.hp / m.maxHp) * 100;
+  const cls = p > 50 ? '' : p > 25 ? 'mid' : 'low';
+  return `<div class="bar"><div class="hpfill ${cls}" style="width:${p}%"></div></div>`;
+}
+
+function focusPips(n) {
+  let s = '<div class="focus">';
+  for (let i = 0; i < G.CONFIG.FOCUS_MAX; i++) s += `<div class="pip ${i < n ? 'on' : ''}"></div>`;
+  return s + '</div>';
+}
+
+function resourceBar() {
+  const c = Object.entries(S.crystals).map(([k, v]) =>
+    `<span style="color:${el(k).color}">&#9670;</span>${v}`).join(' ');
+  return `<div class="res"><span>Crystals ${c}</span>
+    <span>Catalysts <b>${S.catalysts}</b></span>
+    <span>Charge <b>${S.charge}</b></span>
+    <span>Dex <b>${S.dex.size}</b>/27</span></div>`;
+}
+
+// ---------------------------------------------------------------------------
+// views
+// ---------------------------------------------------------------------------
+
+const VIEWS = {};
+
+VIEWS.start = () => {
+  const starters = ['wickle', 'puddlup', 'sproutle'].map((id) => G.speciesById(id));
+  return `<h1>Infinimon</h1>
+  <div class="sub">Playable prototype &middot; all names and art are placeholders</div>
+  <div class="card">
+    <h2>Choose a partner</h2>
+    ${starters.map((s) => `<button data-act="pick" data-id="${s.id}" style="margin-bottom:8px">
+      <div class="mon">
+        <div class="blob" style="background:${el(s.element).color}">${s.name[0]}</div>
+        <div><div class="nm">${s.name}</div>
+        <div class="meta">${el(s.element).name} &middot; ${s.look}</div></div>
+      </div></button>`).join('')}
+    <div class="note">This prototype exists to test whether taming and breeding feel
+    good. Battle numbers come from the same engine the balance simulation runs on.</div>
+  </div>`;
+};
+
+VIEWS.home = () => {
+  const alive = S.team.filter((m) => m.hp > 0).length;
+  return `<h1>The Lab</h1>
+  <div class="sub">${S.team.length} Infinimon &middot; ${alive} ready</div>
+  <div class="card">${resourceBar()}</div>
+  <div class="card">
+    <button class="primary" data-act="explore" ${alive ? '' : 'disabled'}>Explore</button>
+    <div class="row" style="margin-top:8px">
+      <button data-act="view" data-v="lab">Resonance Chamber</button>
+      <button data-act="view" data-v="team">Team</button>
+    </div>
+    ${alive ? '' : `<button style="margin-top:8px" data-act="rest">Rest &amp; heal (all)</button>`}
+  </div>
+  <div class="card">
+    <h2>Your Infinimon</h2>
+    ${S.team.map((m, i) => `<div style="margin-bottom:10px">${monRow(m)}${hpBar(m)}</div>`).join('')
+      || '<div class="meta">None yet.</div>'}
+  </div>`;
+};
+
+VIEWS.battle = () => {
+  const b = S.battle;
+  const p = G.activeMonster(b);
+  const w = b.wild;
+  const canTame = G.canAttune(w);
+  const req = G.TRUST_REQUIRED[w.rarity];
+
+  return `<h1>Wild ${esc(w.name)}</h1>
+  <div class="sub">${esc(w.elementLabel)} &middot; ${w.rarity} &middot; needs ${req} Trust</div>
+
+  <div class="card">
+    ${monRow(w)}${hpBar(w)}
+    <div class="meta" style="margin-top:6px">${Math.round((w.hp / w.maxHp) * 100)}% HP
+      ${canTame ? '&middot; <span style="color:var(--good)">Attune available</span>'
+                : '&middot; weaken below 50% to attune'}</div>
+  </div>
+
+  <div class="card">
+    ${monRow(p)}${hpBar(p)}${focusPips(b.playerFocus)}
+  </div>
+
+  <div class="card">
+    <h2>Moves</h2>
+    <div class="grid2">
+      ${p.moves.map((mv, i) => {
+        const afford = mv.focus <= b.playerFocus;
+        const dmg = G.expectedDamage(p, w, mv);
+        const mult = G.defenseMultiplier(mv.element, w.elements);
+        const tag = mult > 1.05 ? '<span style="color:var(--good)">&#9650;</span>'
+                  : mult < 0.95 ? '<span style="color:var(--bad)">&#9660;</span>' : '';
+        return `<button data-act="move" data-i="${i}" ${afford ? '' : 'disabled'}>
+          <div class="mv"><span style="color:${el(mv.element).color}">&#9670;</span>
+          <span style="flex:1">${mv.name}</span></div>
+          <div class="mv"><span class="pw">~${dmg} dmg ${tag}</span>
+          <span class="cost">${mv.focus > 0 ? mv.focus + ' focus' : 'free'}</span></div>
+        </button>`;
+      }).join('')}
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button data-act="attune" ${canTame ? '' : 'disabled'}
+        style="${canTame ? 'border-color:var(--good);color:var(--good)' : ''}">Attune</button>
+      <button data-act="flee">Flee</button>
+    </div>
+  </div>
+
+  <div class="log" id="log">${b.log.slice(-14).map((l) => `<div>${esc(l)}</div>`).join('')}</div>`;
+};
+
+VIEWS.attune = () => {
+  const a = S.attune;
+  const w = S.battle.wild;
+  const banked = S.banked[w.speciesId] || 0;
+  const req = G.TRUST_REQUIRED[w.rarity];
+  const lowHp = w.hp / w.maxHp < 0.25;
+  const crystals = S.crystals[w.elements[0]];
+
+  return `<h1>Attunement</h1>
+  <div class="sub">Match ${esc(w.name)}'s frequency &middot; ${a.taps.length}/3 taps</div>
+
+  <div class="card">
+    <div class="stat"><span>Trust required</span><span>${req}</span></div>
+    <div class="stat"><span>Banked from past attempts</span><span>+${banked}</span></div>
+    <div class="stat"><span>Below 25% HP bonus</span><span>${lowHp ? '+1' : '—'}</span></div>
+    <div class="stat"><span>Crystal offered</span><span>${a.crystal ? '+1, wider zone' : '—'}</span></div>
+  </div>
+
+  <div class="card">
+    <div id="track">
+      <div id="zone"></div>
+      <div id="needle"></div>
+    </div>
+    <div class="trust">
+      ${[0, 1, 2].map((i) => `<div class="tdot ${a.taps[i] ? 'hit' : ''}"></div>`).join('')}
+    </div>
+    <button class="primary" style="margin-top:12px" data-act="tap">Tap when the needle is in the green</button>
+    ${!a.crystal && a.taps.length === 0 ? `<button style="margin-top:8px" data-act="crystal"
+      ${crystals > 0 ? '' : 'disabled'}>Offer a ${el(w.elements[0]).name} Crystal (${crystals} left)</button>` : ''}
+    <div class="note">A failed attunement is never wasted — shortfall banks toward
+    your next encounter with this species.</div>
+  </div>`;
+};
+
+VIEWS.result = () => {
+  const r = S.lastResult;
+  return `<div class="card banner">
+    <div class="t" style="color:${r.good ? 'var(--good)' : 'var(--bad)'}">${esc(r.title)}</div>
+    <div class="meta">${esc(r.body)}</div>
+    ${r.mon ? `<div style="margin:16px auto;display:flex;justify-content:center">
+      <div class="blob big" style="${blobStyle(r.mon, true)}">${initial(r.mon)}</div></div>
+      <div class="nm">${esc(r.mon.name)}</div>
+      <div class="meta">Lv ${r.mon.level} &middot; ${esc(r.mon.elementLabel)} &middot;
+        ${r.mon.maxHp} HP / ${r.mon.atk} ATK / ${r.mon.def} DEF / ${r.mon.spd} SPD</div>` : ''}
+    <button class="primary" style="margin-top:16px" data-act="view" data-v="home">Continue</button>
+  </div>`;
+};
+
+VIEWS.lab = () => {
+  const eligible = S.team.filter((m) => m.elements.length === 1);
+  const [a, b] = S.breedPick.map((uid) => S.team.find((m) => m.uid === uid));
+  const ready = a && b && a.uid !== b.uid;
+  const cost = 60;
+  const canBreed = ready && S.catalysts > 0 && S.charge >= cost;
+
+  return `<h1>Resonance Chamber</h1>
+  <div class="sub">Pair two base Infinimon &middot; hybrid pairs are a v2 feature</div>
+  <div class="card">${resourceBar()}</div>
+  <div class="card">
+    <h2>Select two</h2>
+    ${eligible.map((m) => `<button data-act="breedpick" data-uid="${m.uid}"
+      class="${S.breedPick.includes(m.uid) ? 'sel' : ''}" style="margin-bottom:8px">
+      ${monRow(m)}</button>`).join('') || '<div class="meta">Tame more Infinimon first.</div>'}
+  </div>
+  ${ready ? `<div class="card">
+    <div class="stat"><span>Result</span><span>${a.elements[0] === b.elements[0]
+      ? 'Refined ' + esc(a.name) : esc(G.hybridName(a.elements[0], b.elements[0])) + ' hybrid'}</span></div>
+    <div class="stat"><span>Charge</span><span>${S.charge} / ${cost}</span></div>
+    <div class="stat"><span>Rift Catalyst</span><span>${S.catalysts} available</span></div>
+    <button class="primary" style="margin-top:12px" data-act="breed" ${canBreed ? '' : 'disabled'}>
+      ${canBreed ? 'Begin resonance' : S.charge < cost ? 'Not enough Charge — battle more' : 'No Catalyst'}</button>
+    <div class="note">Charge is earned by battling, not by waiting on a timer.</div>
+  </div>` : ''}
+  <button data-act="view" data-v="home">Back</button>`;
+};
+
+VIEWS.team = () => `<h1>Team</h1>
+  <div class="sub">First three are your active party</div>
+  ${S.team.map((m, i) => `<div class="card">
+    ${monRow(m)}${hpBar(m)}
+    <div style="margin-top:8px">
+      <div class="stat"><span>ATK / DEF / SPD</span><span>${m.atk} / ${m.def} / ${m.spd}</span></div>
+      <div class="stat"><span>Bond</span><span>${m.bond}${m.bond >= 60 ? ' (bonus active)' : ''}</span></div>
+      <div class="stat"><span>Moves</span><span>${m.moves.map((v) => v.name).join(', ')}</span></div>
+    </div>
+    ${i > 0 ? `<button style="margin-top:8px" data-act="promote" data-uid="${m.uid}">Move to front</button>` : ''}
+  </div>`).join('') || '<div class="card meta">Empty.</div>'}
+  <button data-act="view" data-v="home">Back</button>`;
+
+// ---------------------------------------------------------------------------
+// render + actions
+// ---------------------------------------------------------------------------
+
+function render() {
+  app.innerHTML = VIEWS[S.view]();
+  const log = document.getElementById('log');
+  if (log) log.scrollTop = log.scrollHeight;
+  if (S.view === 'attune') startNeedle();
+}
+
+function show(title, body, mon, good) {
+  S.lastResult = { title, body, mon, good };
+  S.view = 'result';
+  render();
+}
+
+function addMonster(m) {
+  S.team.push(m);
+  S.dex.add(m.name);
+}
+
+app.addEventListener('click', (ev) => {
+  const btn = ev.target.closest('button[data-act]');
+  if (!btn) return;
+  const { act } = btn.dataset;
+
+  if (act === 'pick') {
+    addMonster(G.createMonster({ speciesId: btn.dataset.id, level: 5, bond: 40 }));
+    S.view = 'home';
+  }
+
+  else if (act === 'view') { S.view = btn.dataset.v; S.breedPick = []; }
+
+  else if (act === 'rest') {
+    S.team.forEach((m) => { m.hp = m.maxHp; m.status = null; });
+    S.view = 'home';
+  }
+
+  else if (act === 'explore') {
+    const party = S.team.filter((m) => m.hp > 0).slice(0, 3);
+    const wild = G.randomWild(rng, Math.max(3, S.wildLevel + Math.floor(rng() * 3) - 1));
+    S.battle = G.createBattle(party, wild, rng);
+    S.battle.log.push(`A wild ${wild.name} appears!`);
+    S.view = 'battle';
+  }
+
+  else if (act === 'move') {
+    const b = S.battle;
+    const p = G.activeMonster(b);
+    G.resolveTurn(b, p.moves[+btn.dataset.i]);
+    afterTurn();
+  }
+
+  else if (act === 'attune') {
+    S.attune = { taps: [], crystal: false, t: 0 };
+    S.view = 'attune';
+  }
+
+  else if (act === 'crystal') {
+    const e = S.battle.wild.elements[0];
+    if (S.crystals[e] > 0) { S.crystals[e] -= 1; S.attune.crystal = true; }
+  }
+
+  else if (act === 'tap') doTap();
+
+  else if (act === 'flee') { S.battle = null; S.view = 'home'; }
+
+  else if (act === 'breedpick') {
+    const uid = +btn.dataset.uid;
+    const i = S.breedPick.indexOf(uid);
+    if (i >= 0) S.breedPick.splice(i, 1);
+    else { S.breedPick.push(uid); if (S.breedPick.length > 2) S.breedPick.shift(); }
+  }
+
+  else if (act === 'breed') doBreed();
+
+  else if (act === 'promote') {
+    const uid = +btn.dataset.uid;
+    const i = S.team.findIndex((m) => m.uid === uid);
+    S.team.unshift(S.team.splice(i, 1)[0]);
+  }
+
+  render();
+});
+
+function afterTurn() {
+  const b = S.battle;
+  if (!b.over) return;
+  stopNeedle();
+  if (b.outcome === 'wild_fainted') {
+    const gain = 8 + Math.floor(rng() * 8);
+    S.charge += gain;
+    b.team.forEach((m) => { if (m.hp > 0) m.bond = Math.min(100, m.bond + 2); });
+    const e = b.wild.elements[0];
+    S.crystals[e] += 1;
+    S.battle = null;
+    show('The wild Infinimon fled', `It escaped before you could attune. +${gain} Charge, +1 ${el(e).name} Crystal.`, null, false);
+  } else {
+    S.team.forEach((m) => { m.bond = Math.max(0, m.bond - 5); });
+    Object.keys(S.crystals).forEach((k) => { S.crystals[k] = Math.floor(S.crystals[k] / 2); });
+    S.battle = null;
+    show('Recalled to the Lab', 'Your party is out. You lost half your crystals — nothing else.', null, false);
+  }
+}
+
+function doBreed() {
+  const [a, b] = S.breedPick.map((uid) => S.team.find((m) => m.uid === uid));
+  const res = G.breed(a, b, rng);
+  if (res.error) { alert(res.error); return; }
+  S.catalysts -= 1;
+  S.charge -= 60;
+  S.breedPick = [];
+  addMonster(res.child);
+  show(
+    res.rareBloom ? 'A Rare Bloom!' : res.kind === 'hybrid' ? 'A new hybrid' : 'A refined pairing',
+    res.rareBloom ? 'Alternate palette and +10% to every stat.'
+      : res.kind === 'hybrid' ? `${a.name} and ${b.name} produced a ${res.hybridElement}-element Infinimon.`
+      : `A stronger ${a.name} line.`,
+    res.child, true
+  );
+}
+
+// ---------------------------------------------------------------------------
+// attunement minigame
+// ---------------------------------------------------------------------------
+
+let raf = null;
+
+function zoneWidth() { return S.attune.crystal ? 30 : 21; }
+
+function startNeedle() {
+  stopNeedle();
+  const track = document.getElementById('track');
+  const zone = document.getElementById('zone');
+  const needle = document.getElementById('needle');
+  if (!track) return;
+
+  const w = zoneWidth();
+  S.attune.zoneStart = 12 + rng() * (76 - w);
+  zone.style.left = S.attune.zoneStart + '%';
+  zone.style.width = w + '%';
+
+  const speed = 0.9 + (S.battle.wild.rarity === 'rare' ? 0.5
+    : S.battle.wild.rarity === 'uncommon' ? 0.25 : 0);
+  let t = S.attune.t || 0;
+
+  const step = () => {
+    t += 0.016 * speed;
+    // triangle wave, 0..1, so the needle sweeps back and forth
+    const pos = Math.abs(((t % 2) + 2) % 2 - 1);
+    S.attune.pos = pos * 100;
+    S.attune.t = t;
+    needle.style.left = S.attune.pos + '%';
+    raf = requestAnimationFrame(step);
+  };
+  step();
+}
+
+function stopNeedle() { if (raf) cancelAnimationFrame(raf); raf = null; }
+
+function doTap() {
+  const a = S.attune;
+  const w = zoneWidth();
+  const hit = a.pos >= a.zoneStart && a.pos <= a.zoneStart + w;
+  a.taps.push(hit);
+
+  if (a.taps.length < 3) {
+    // reposition the zone between taps so it stays a read, not a rhythm
+    const nz = 12 + rng() * (76 - w);
+    a.zoneStart = nz;
+    const zone = document.getElementById('zone');
+    if (zone) zone.style.left = nz + '%';
+    render();
+    return;
+  }
+
+  stopNeedle();
+  const wild = S.battle.wild;
+  const banked = S.banked[wild.speciesId] || 0;
+  const result = G.attune(wild, {
+    taps: a.taps.filter(Boolean).length,
+    crystalMatch: a.crystal,
+    banked,
+  });
+  S.banked[wild.speciesId] = result.newBanked;
+
+  if (result.success) {
+    wild.bond = 30;
+    wild.hp = wild.maxHp;
+    addMonster(wild);
+    const gain = 8 + Math.floor(rng() * 8);
+    S.charge += gain;
+    S.battle = null;
+    S.view = 'result';
+    show(`${wild.name} joined you!`,
+      `Trust ${result.trust} of ${result.required}. +${gain} Charge.`, wild, true);
+  } else {
+    S.battle = null;
+    S.view = 'result';
+    show(`${wild.name} slipped away`,
+      `Trust ${result.trust} of ${result.required}. Next time you meet a ${wild.name}, ` +
+      `you start with +${result.newBanked} Trust.`, null, false);
+  }
+}
+
+render();
+</script>
+</body>
+</html>
