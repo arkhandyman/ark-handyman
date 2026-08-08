@@ -29,12 +29,13 @@ via a plain `<script src>` rather than an ES module specifically so it does.
   surge, three status effects, SPD turn order with visible coin flips (§5)
 - Breeding: hybrid and same-element pairing, stat inheritance, Rare Bloom (§6)
 - Proportional stat growth, XP and leveling, and the Bond bonus (§7)
+- Save/load to localStorage, with a reset control
 
 ## What's deliberately missing
 
-Story, zones, the four playable characters, save/load, and art. The prototype
-exists to answer one question — *do taming and breeding feel good?* — so
-everything not serving that was left out.
+Story, zones, the four playable characters, real move pools, hybrid species
+identity, and art. The prototype exists to answer one question — *do taming and
+breeding feel good?* — so everything not serving that was left out.
 
 Creature art is placeholder colored blobs. Creature design is founder-led (§9);
 these are stand-ins so the mechanics can be felt without waiting on art.
